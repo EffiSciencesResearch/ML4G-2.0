@@ -5,7 +5,8 @@ The program is aimed at beginners in machine learning, but is quite ambitious, a
 
 # Curriculum ML4Good
 
-We draw inspiration from the redwood mlab, which focuses mainly on the ML engineering part. In comparison, we will spend more time on conceptual aspects.
+We draw inspiration from the redwood mlab, and ARENA, both of which focuses mainly on the ML engineering part.
+However there are a lot more workshops on strategy, goverance and conceptual AI safety during the ML4G.
 
 ## For teachers, contributors and assistants
 
@@ -20,3 +21,8 @@ source .env/bin/activate
 pip install -r requirements.txt
 # Setup the pre-commit hooks
 pre-commit install
+```
+
+The pre-commit hooks will automatically format and remove the output of the notebooks before a commit. It will also prevent commiting large files.
+You can also run them manualy at any time on staged files with `pre-commit run`.
+If the hooks make any change, it will cancel the commit and add the changes as unstagged changes.

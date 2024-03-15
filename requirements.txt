@@ -11,9 +11,11 @@ jaxtyping
 jupyter
 notebook
 tqdm
+typer
 plotly
 pandas
 pre-commit
+rich
 
 # accelerate
 # black
