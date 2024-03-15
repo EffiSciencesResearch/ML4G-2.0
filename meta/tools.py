@@ -61,30 +61,35 @@ def show_links(with_file: bool = False, verbose: bool = False):
             print(link.url)
 
 
-BAD_PATTERNS = []
+BAD_PATTERNS = ["/ML4G/"]
 
 
-def check_link(link: Link, curl: bool = False) -> bool:
+def check_link(link: Link, curl: bool = False) -> str | None:
     """Check if the link is broken."""
-    if any(pattern in link.url for pattern in BAD_PATTERNS):
-        return False
+
+    url = link.url
 
     # If a colab link to this repo, check that the file exists
-    colab_link_start = (
-        "https://colab.research.google.com/github/EffiSciencesResearch/ML4G/blob/main/"
-    )
-    if link.url.startswith(colab_link_start):
-        path = Path(link.url[len(colab_link_start) :])
+    colab_link = "https://colab.research.google.com/github/"
+    this_repo = colab_link + "EffiSciencesResearch/ML4G-2.0/blob/main/"
+    if url.startswith(colab_link):
+        if not url.startswith(this_repo):
+            return "Colab link to another repo"
+        path = Path(url[len(this_repo) :])
         if not path.exists():
-            return False
+            return f"Colab link to non-existing file: {path}"
+
+    for pattern in BAD_PATTERNS:
+        if pattern in url:
+            return f"Bad pattern: {pattern}"
 
     if curl:
         try:
             check_output(["curl", "--globoff", "--head", "--silent", link.url])
         except Exception:
-            return False
+            return f"curl failed"
 
-    return True
+    return None
 
 
 @app.command()
@@ -92,8 +97,9 @@ def check_links(curl: bool = False):
     """Check for broken links."""
 
     for link in get_all_links():
-        if not check_link(link, curl):
-            print(f"🔴 {link}")
+        error = check_link(link, curl)
+        if error is not None:
+            print(f"🔴 {link} - {error}")
 
 
 if __name__ == "__main__":
