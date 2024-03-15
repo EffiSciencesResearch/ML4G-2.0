@@ -71,7 +71,7 @@ def check_link(link: Link, curl: bool = False) -> str | None:
 
     # If a colab link to this repo, check that the file exists
     colab_link = "https://colab.research.google.com/github/"
-    this_repo = colab_link + "EffiSciencesResearch/ML4G-2.0/blob/main/"
+    this_repo = colab_link + "EffiSciencesResearch/ML4G-2.0/blob/master/"
     if url.startswith(colab_link):
         if not url.startswith(this_repo):
             return "Colab link to another repo"
