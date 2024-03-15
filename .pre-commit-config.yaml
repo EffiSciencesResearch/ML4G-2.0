@@ -13,7 +13,11 @@ repos:
         args:
         - --line-length
         - "100"
-- repo: https://github.com/kynan/nbstripout
-  rev: 0.7.1
-  hooks:
-    - id: nbstripout
+-   repo: local
+    hooks:
+    -   id: jupyer-strip-unnecessary
+        name: jupyter-strip-unnecessary
+        files: \.ipynb$
+        language: system
+        pass_filenames: true
+        entry: meta/clean-jupyter.sh
