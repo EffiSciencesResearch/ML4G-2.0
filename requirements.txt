@@ -3,13 +3,16 @@
 # Before installing the requirement.txt
 torch
 
+anthropic
 black[jupyter]
 einops
 ipykernel
 ipywidgets
 jaxtyping
 jupyter
+matplotlib
 notebook
+openai
 tqdm
 typer
 plotly
@@ -26,7 +29,6 @@ rich
 # ftfy
 # gym==0.23.1
 # joblib
-# matplotlib
 # mediapy
 # numpy-stl
 # pygame
