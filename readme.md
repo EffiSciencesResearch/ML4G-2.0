@@ -23,6 +23,17 @@ pip install -r requirements.txt
 pre-commit install
 ```
 
-The pre-commit hooks will automatically format and remove the output of the notebooks before a commit. It will also prevent commiting large files.
+The pre-commit hooks will automatically format and **remove the output** of the notebooks before a commit. It will also prevent commiting large files.
 You can also run them manualy at any time on staged files with `pre-commit run`.
 If the hooks make any change, it will cancel the commit and add the changes as unstagged changes.
+
+### Adding new workshops
+
+New workshops go in `workshops/`. They should be jupyter notebooks, possibly with auxilary files.
+- If they need auxilary files, check how it was done for the [tensors workshop](./workshops/tensors/tensors.ipynb). You will need code similar to that of the first code cell of the notebook.
+- Every cell output will be removed from the notebook when you commit (due to pre-commit). This is great for the health of the repo, but if you are still experimentating and developping the notebook you might want to remember it.
+- Notebooks are then availaible on google colab with `https://colab.research.google.com/github/EffiSciencesResearch/ML4G/blob/main/<PATH TO NOTEBOOK IN THE GIT>`
+- It's helpful if you add this nice badge at the start of the notebook, replacing `<PATH TO NOTEBOOK IN THE GIT>` with `workshops/….ipynb`:
+    ```html
+    <a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G/blob/main/<PATH TO NOTEBOOK IN THE GIT>" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+    ```
