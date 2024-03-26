@@ -13,12 +13,16 @@ jupyter
 matplotlib
 notebook
 openai
-tqdm
-typer
-plotly
 pandas
+plotly
 pre-commit
 rich
+tqdm
+transformer_utils
+transformer_lens
+transformers
+typeguard
+typer
 
 # accelerate
 # black
