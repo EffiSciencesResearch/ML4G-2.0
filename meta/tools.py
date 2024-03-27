@@ -111,7 +111,7 @@ def badge(file: Path, auto_add: bool = False):
 
     assert file.exists(), f"File {file} does not exist"
     relative_path = file.resolve().relative_to(ROOT)
-    badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/main/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+    badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
 
     if auto_add:
         assert file.suffix == ".ipynb", f"File {str(file)} is not a notebook"
