@@ -8,7 +8,7 @@ for file in "$@"; do
         '
         (.cells[] | select(has("outputs")) | .outputs) = []
         | (.cells[] | select(has("execution_count")) | .execution_count) = null
-        | .metadata = {"language_info": {"name":"python", "pygments_lexer": "ipython3"}}
+        | .metadata = {"language_info": {"name":"python", "pygments_lexer": "ipython3", "version": "3.11.8"}}
         | .cells[].metadata = {}
         ' "$file")
     echo "$out" > "$file"
