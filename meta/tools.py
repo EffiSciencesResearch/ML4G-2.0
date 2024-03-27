@@ -1,6 +1,7 @@
 #!/bin/env python
 
 from dataclasses import dataclass
+import json
 import re
 from pathlib import Path
 from subprocess import check_output
@@ -10,6 +11,8 @@ import typer
 from rich import print as rprint
 
 app = typer.Typer()
+
+ROOT = Path(__file__).resolve().parent.parent
 
 RE_URL = re.compile(r"(https?://[^\s)\"]+)([\s).,\\\n]|$)")
 
@@ -100,6 +103,33 @@ def check_links(curl: bool = False):
         error = check_link(link, curl)
         if error is not None:
             print(f"🔴 {link} - {error}")
+
+
+@app.command()
+def badge(file: Path, auto_add: bool = False):
+    """Print code of the "open in colab" badge for a file."""
+
+    assert file.exists(), f"File {file} does not exist"
+    relative_path = file.resolve().relative_to(ROOT)
+    badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/main/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+
+    if auto_add:
+        assert file.suffix == ".ipynb", f"File {str(file)} is not a notebook"
+        content = file.read_text()
+        if "colab-badge.svg" in content:
+            print(f"Badge already present in {str(file)}")
+        else:
+            # Add the badge to the first markdown cell
+            parsed = json.loads(content)
+            for cell in parsed["cells"]:
+                if cell["cell_type"] == "markdown":
+                    cell["source"].insert(0, badge_content)
+                    break
+
+            file.write_text(json.dumps(parsed, indent=2))
+
+    else:
+        print(badge_content)
 
 
 if __name__ == "__main__":
