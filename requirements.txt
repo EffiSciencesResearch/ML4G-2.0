@@ -8,6 +8,7 @@ black[jupyter]
 einops
 ipykernel
 ipywidgets
+torchvision
 jaxtyping
 jupyter
 matplotlib
@@ -23,6 +24,7 @@ transformer_lens
 transformers
 typeguard
 typer
+scikit-learn
 
 # accelerate
 # black
@@ -38,7 +40,6 @@ typer
 # pygame
 # pytest
 # requests
-# scikit-learn
 # sentence-transformers
 # sympy
 # tensorboard
