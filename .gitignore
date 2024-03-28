@@ -22,3 +22,4 @@ days/w1d2/.DS_Store
 *.pth
 *.zip
 .env
+.venv
