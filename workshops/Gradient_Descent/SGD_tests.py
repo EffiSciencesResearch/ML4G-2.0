@@ -2,10 +2,7 @@ from typing import Iterable, Union, Optional, List, Tuple
 import matplotlib.pyplot as plt
 import matplotlib.figure
 import torch as t
-import torch.nn.functional as F
-from einops import rearrange, repeat
-import torch
-from tqdm.auto import tqdm
+from einops import repeat
 import numpy as np
 
 
@@ -52,14 +49,17 @@ def test_momentum(optimizer_class):
     parameters = t.tensor([-1.0, 2.0], requires_grad=True)
     N_steps = 100
     learning_rate = 0.001
-    optimizer = optimizer_class(parameters, learning_rate, beta=0.9)
+    optimizer = optimizer_class(parameters, learning_rate, momentum=0.9)
 
     test_trajectory = optimize_function(
         rosenbrocks_banana, parameters, optimizer, N_steps
     )
 
     parameters = t.tensor([-1.0, 2.0], requires_grad=True)
-    solution_optimizer = t.optim.SGD([parameters], lr=learning_rate, momentum=0.9)
+    adjested_learning_rate = learning_rate * (1 - 0.9)
+    solution_optimizer = t.optim.SGD(
+        [parameters], lr=adjested_learning_rate, momentum=0.9
+    )
     solution_trajectory = optimize_function(
         rosenbrocks_banana, parameters, solution_optimizer, N_steps
     )
@@ -74,7 +74,9 @@ def test_RMSprop(optimizer_class):
     N_steps = 100
     learning_rate = 0.001
     epsilon = 1e-8
-    optimizer = optimizer_class(parameters, learning_rate, beta=0.9, epsilon=epsilon)
+    optimizer = optimizer_class(
+        parameters, learning_rate, momentum=0.9, epsilon=epsilon
+    )
 
     test_trajectory = optimize_function(
         rosenbrocks_banana, parameters, optimizer, N_steps
@@ -99,7 +101,11 @@ def test_Adam(optimizer_class):
     learning_rate = 0.001
     epsilon = 1e-8
     optimizer = optimizer_class(
-        parameters, learning_rate, beta1=0.9, beta2=0.999, epsilon=epsilon
+        parameters,
+        learning_rate,
+        momentum_grad=0.9,
+        momentum_grad_squared=0.999,
+        epsilon=epsilon,
     )
 
     test_trajectory = optimize_function(

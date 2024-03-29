@@ -6,20 +6,11 @@ crash-*
 mlab.egg-info/
 scratch/
 .ipynb_checkpoints/
-image*
-infrastructure/.lambda_account.json
-.hypothesis
-launch.json
-days/data/TinyImageNet/**
-days/saved_models/tutorial10/**
-days/data/TinyImageNet.zip
-mlab/runs/**
-.pth
-runs/**
-mlab/data/**
-mlab/w1d2_cifar10_train/**
-days/w1d2/.DS_Store
 *.pth
 *.zip
 .env
+<<<<<<< HEAD
 .venv
+=======
+.envrc
+>>>>>>> f599c67b11070403fc86e46f1f3978e1956ac61f
