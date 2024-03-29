@@ -106,18 +106,27 @@ def check_links(curl: bool = False):
 
 
 @app.command()
-def badge(file: Path, auto_add: bool = False):
+def badge(files: list[Path]):
     """Print code of the "open in colab" badge for a file."""
 
-    assert file.exists(), f"File {file} does not exist"
-    relative_path = file.resolve().relative_to(ROOT)
-    badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+    for file in files[:]:
+        if file.is_dir():
+            files.remove(file)
+            files.extend(file.rglob("*.ipynb"))
 
-    if auto_add:
+    for file in files:
+        if not file.exists():
+            print(f"{file} does not exist")
+        elif file.suffix != ".ipynb":
+            print(f"{file} is not a notebook")
+
+        relative_path = file.resolve().relative_to(ROOT)
+        badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+
         assert file.suffix == ".ipynb", f"File {str(file)} is not a notebook"
         content = file.read_text()
         if "colab-badge.svg" in content:
-            print(f"Badge already present in {str(file)}")
+            print(f"{file} already has a badge")
         else:
             # Add the badge to the first markdown cell
             parsed = json.loads(content)
@@ -127,9 +136,6 @@ def badge(file: Path, auto_add: bool = False):
                     break
 
             file.write_text(json.dumps(parsed, indent=2))
-
-    else:
-        print(badge_content)
 
 
 if __name__ == "__main__":
