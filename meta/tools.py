@@ -107,7 +107,7 @@ def check_links(curl: bool = False):
 
 @app.command()
 def badge(files: list[Path]):
-    """Print code of the "open in colab" badge for a file."""
+    """Print code of the "open in colab" badge every input file. Scans directories recursively."""
 
     for file in files[:]:
         if file.is_dir():
@@ -116,26 +116,29 @@ def badge(files: list[Path]):
 
     for file in files:
         if not file.exists():
-            print(f"{file} does not exist")
+            print(f"🙈 {file} does not exist")
+            continue
         elif file.suffix != ".ipynb":
-            print(f"{file} is not a notebook")
+            print(f"🚷 {file} is not a notebook")
+            continue
+
+        content = file.read_text()
+        if "colab-badge.svg" in content:
+            print(f"✅ {file} already has a badge")
+            continue
 
         relative_path = file.resolve().relative_to(ROOT)
         badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
 
-        assert file.suffix == ".ipynb", f"File {str(file)} is not a notebook"
-        content = file.read_text()
-        if "colab-badge.svg" in content:
-            print(f"{file} already has a badge")
-        else:
-            # Add the badge to the first markdown cell
-            parsed = json.loads(content)
-            for cell in parsed["cells"]:
-                if cell["cell_type"] == "markdown":
-                    cell["source"].insert(0, badge_content)
-                    break
+        # Add the badge to the first markdown cell
+        parsed = json.loads(content)
+        for cell in parsed["cells"]:
+            if cell["cell_type"] == "markdown":
+                cell["source"].insert(0, badge_content)
+                break
 
-            file.write_text(json.dumps(parsed, indent=2))
+        file.write_text(json.dumps(parsed, indent=2))
+        print(f"🖊  {file} now has a badge!")
 
 
 if __name__ == "__main__":
