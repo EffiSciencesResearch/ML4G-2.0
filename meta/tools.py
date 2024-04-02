@@ -1,5 +1,6 @@
 #!/bin/env python
 
+from copy import deepcopy
 from dataclasses import dataclass
 import json
 import re
@@ -106,30 +107,168 @@ def check_links(curl: bool = False):
 
 
 @app.command()
-def badge(file: Path, auto_add: bool = False):
-    """Print code of the "open in colab" badge for a file."""
+def badge(files: list[Path]):
+    """Print code of the "open in colab" badge every input file. Scans directories recursively."""
 
-    assert file.exists(), f"File {file} does not exist"
-    relative_path = file.resolve().relative_to(ROOT)
-    badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+    for file in files[:]:
+        if file.is_dir():
+            files.remove(file)
+            files.extend(file.rglob("*.ipynb"))
 
-    if auto_add:
-        assert file.suffix == ".ipynb", f"File {str(file)} is not a notebook"
+    for file in files:
+        if not file.exists():
+            print(f"🙈 {file} does not exist")
+            continue
+        elif file.suffix != ".ipynb":
+            print(f"🚷 {file} is not a notebook")
+            continue
+
         content = file.read_text()
         if "colab-badge.svg" in content:
-            print(f"Badge already present in {str(file)}")
+            print(f"✅ {file} already has a badge")
+            continue
+
+        relative_path = file.resolve().relative_to(ROOT)
+        badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+
+        # Add the badge to the first markdown cell
+        parsed = json.loads(content)
+        for cell in parsed["cells"]:
+            if cell["cell_type"] == "markdown":
+                cell["source"].insert(0, badge_content)
+                break
+
+        file.write_text(json.dumps(parsed, indent=2))
+        print(f"🖊  {file} now has a badge!")
+
+
+@app.command()
+def sync(file: Path):
+    """Generate the exercises notebook from the solutions notebook.
+
+    All lines after annotations such as "Hide: all" or "Hide: hard" are removed.
+    Those annotations should be on their own line and are removed too. Until an annotation "Hide: none".
+    Labels after "Hide: <name1>, <name2>" can be arbitrary python names, but "none", "all" and "solution" are special.
+    This generates at least a notebook without the '-complete' suffix, corresponding to things hidden with "Hide: all".
+    And also notebooks names "basename-suffix.ipynb" for each suffix.
+
+    Example:
+
+    ```python
+    print("Always visible")
+    # Hide: hard
+    print("Hidden in the hard notebook")
+    print("And this one too")
+    # Hide: all
+    print("Hidden in all notebooks but the solution")
+    # Hide: solution
+    ...
+    # Hide: none
+    print("Visible again")
+    ```
+
+    Will generate:
+    - basename.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "...", "Visible again"
+    - basename-hard.ipynb: "Always visible", "...", "Visible again"
+    And the solution after this cell will contain everything but the "..." line.
+    """
+
+    assert file.exists(), f"{file} does not exist"
+    assert file.name.endswith(
+        "-complete.ipynb"
+    ), "Solution notebook must end with '-complete.ipynb'"
+
+    notebook = json.loads(file.read_text())
+
+    def parse_hide(line: str) -> set[str]:
+        if line.strip().startswith("# Hide:"):
+            return {label.strip().lower() for label in line.split(":")[1].split(",")}
+        return set()
+
+    # Find labels
+    labels = set()
+    for cell in notebook["cells"]:
+        if cell["cell_type"] == "code":
+            for line in cell["source"]:
+                labels = labels.union(parse_hide(line))
+
+    assert "complete" not in labels, "complete is a reserved label"
+    labels.discard("none")
+    labels.discard("solution")
+
+    # Generate notebooks
+    for label in labels:
+        if label == "all":
+            base_file = file.with_name(file.name.replace("-complete", ""))
         else:
-            # Add the badge to the first markdown cell
-            parsed = json.loads(content)
-            for cell in parsed["cells"]:
+            base_file = file.with_name(file.name.replace("-complete", f"-{label}"))
+
+        new_notebook = deepcopy(notebook)
+        new_cells = []
+
+        solution_lines = []
+
+        for cell in new_notebook["cells"]:
+            if solution_lines:
+                new_lines = [
+                    "<details>\n",
+                    "<summary>Show solution</summary>\n",
+                    "\n",
+                    "```python\n",
+                    *solution_lines,
+                    "```\n",
+                    "</details>\n",
+                    "\n",
+                ]
                 if cell["cell_type"] == "markdown":
-                    cell["source"].insert(0, badge_content)
-                    break
+                    cell["source"] = new_lines + cell["source"]
+                else:
+                    new_cells.append(
+                        {
+                            "cell_type": "markdown",
+                            "metadata": {},
+                            "source": new_lines,
+                        }
+                    )
+                solution_lines = []
 
-            file.write_text(json.dumps(parsed, indent=2))
+            if cell["cell_type"] == "code":
+                hide = False
+                hide_in_solution = False
+                any_hidden = False
+                new_lines = []
+                for line in cell["source"]:
+                    hides_defined_here = parse_hide(line)
+                    if "solution" in hides_defined_here:
+                        hide_in_solution = True
+                    elif hides_defined_here:
+                        hide_in_solution = False
 
-    else:
-        print(badge_content)
+                    if "all" in hides_defined_here:
+                        hide = True
+                    elif label in hides_defined_here:
+                        hide = True
+                    elif hides_defined_here:
+                        hide = False
+
+                    if not hide and not hides_defined_here:
+                        new_lines.append(line)
+                    else:
+                        any_hidden = True
+
+                    if not hide_in_solution and not hides_defined_here:
+                        solution_lines.append(line)
+
+                cell["source"] = new_lines
+                if not any_hidden:
+                    solution_lines = []
+            new_cells.append(cell)
+        new_notebook["cells"] = new_cells
+
+        base_file.write_text(json.dumps(new_notebook, indent=2))
+        print(f"📝 {base_file} generated")
+
+    base_file = file.with_name(file.name.replace("-complete", ""))
 
 
 if __name__ == "__main__":
