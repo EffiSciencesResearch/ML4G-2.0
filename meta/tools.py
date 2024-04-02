@@ -1,5 +1,6 @@
 #!/bin/env python
 
+from copy import deepcopy
 from dataclasses import dataclass
 import json
 import re
@@ -139,6 +140,91 @@ def badge(files: list[Path]):
 
         file.write_text(json.dumps(parsed, indent=2))
         print(f"🖊  {file} now has a badge!")
+
+
+@app.command()
+def sync(file: Path):
+    """Generate the exercises notebook from the solutions notebook.
+
+    All lines after annotations such as "Hide: all" or "Hide: hard" are removed.
+    Those annotations should be on their own line and are removed too.
+    Until an annotation "Hide: none". Labels after "Hide: <name1>, <name2>" can be arbitrary python names, but "none" and "all" are special.
+    This generates at least a notebook without the '-complete' suffix, corresponding to things hidden with "Hide: all".
+    And also notebooks names "basename-suffix.ipynb" for each suffix.
+
+    Example:
+
+    ```python
+    print("Always visible")
+    # Hide: hard
+    print("Hidden in the hard notebook")
+    print("And this one too")
+    # Hide: all
+    print("Hidden in the hard notebook")
+    # Hide: none
+    print("Visible again")
+    ```
+
+    Will generate:
+    - basename.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "Visible again"
+    - basename-hard.ipynb: "Always visible", "Visible again"
+    """
+
+    assert file.exists(), f"{file} does not exist"
+    assert file.name.endswith(
+        "-complete.ipynb"
+    ), "Solution notebook must end with '-complete.ipynb'"
+
+    notebook = json.loads(file.read_text())
+
+    def parse_hide(line: str) -> set[str]:
+        if line.strip().startswith("# Hide:"):
+            return {label.strip().lower() for label in line.split(":")[1].split(",")}
+        return set()
+
+    # Find labels
+    labels = set()
+    for cell in notebook["cells"]:
+        if cell["cell_type"] == "code":
+            for line in cell["source"]:
+                labels = labels.union(parse_hide(line))
+
+    assert "complete" not in labels, "complete is a reserved label"
+    labels.discard("none")
+
+    # Generate notebooks
+    for label in labels:
+        if label == "all":
+            base_file = file.with_name(file.name.replace("-complete", ""))
+        else:
+            base_file = file.with_name(file.name.replace("-complete", f"-{label}"))
+
+        new_notebook = deepcopy(notebook)
+        new_cells = []
+
+        for cell in new_notebook["cells"]:
+            if cell["cell_type"] == "code":
+                hide = False
+                new_lines = []
+                for line in cell["source"]:
+                    hides_defined_here = parse_hide(line)
+                    if "all" in hides_defined_here:
+                        hide = True
+                    elif label in hides_defined_here:
+                        hide = True
+                    elif hides_defined_here:
+                        hide = False
+                    elif not hide:
+                        new_lines.append(line)
+
+                cell["source"] = new_lines
+            new_cells.append(cell)
+        new_notebook["cells"] = new_cells
+
+        base_file.write_text(json.dumps(new_notebook, indent=2))
+        print(f"📝 {base_file} generated")
+
+    base_file = file.with_name(file.name.replace("-complete", ""))
 
 
 if __name__ == "__main__":
