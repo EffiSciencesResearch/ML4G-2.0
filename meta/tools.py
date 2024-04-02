@@ -106,9 +106,17 @@ def check_links(curl: bool = False):
             print(f"🔴 {link} - {error}")
 
 
+BADGE_TEMPLATE = """<a href="https://colab.research.google.com/github/EffiSciencesResearch/{repo_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+RE_BADGE = re.compile(BADGE_TEMPLATE.format(repo_path=r'[^"]+'), re.MULTILINE)
+RE_BADGE = re.compile(r'<a href=\\"([^"]+)\\"[^>]*>.*?colab-badge\.svg.*?</a>', re.MULTILINE)
+
+
 @app.command()
 def badge(files: list[Path]):
-    """Print code of the "open in colab" badge every input file. Scans directories recursively."""
+    """Add the "Open in Colab" badge to every of input notebook.
+
+    Scans directories recursively. If a badge is already present, it will be updated to the current file path.
+    """
 
     for file in files[:]:
         if file.is_dir():
@@ -124,22 +132,35 @@ def badge(files: list[Path]):
             continue
 
         content = file.read_text()
-        if "colab-badge.svg" in content:
-            print(f"✅ {file} already has a badge")
-            continue
+        initial_content = content
 
         relative_path = file.resolve().relative_to(ROOT)
-        badge_content = f"""<a href="https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{relative_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+        badge_content = BADGE_TEMPLATE.format(repo_path=f"ML4G-2.0/blob/master/{relative_path}")
+        badge_content = badge_content.replace('"', r"\"")
 
-        # Add the badge to the first markdown cell
-        parsed = json.loads(content)
-        for cell in parsed["cells"]:
-            if cell["cell_type"] == "markdown":
-                cell["source"].insert(0, badge_content)
-                break
+        # Sync the badge and file name
+        content = RE_BADGE.sub(badge_content, content)
 
-        file.write_text(json.dumps(parsed, indent=2))
-        print(f"🖊  {file} now has a badge!")
+        # Add the badge in the first cell if it is not present
+        if badge_content not in content:
+            parsed = json.loads(content)
+            for cell in parsed["cells"]:
+                if cell["cell_type"] == "markdown":
+                    cell["source"].insert(0, badge_content + "\n")
+                    break
+            content = json.dumps(parsed, indent=2)
+
+        bagdes_count = content.count("colab-badge.svg")
+        if bagdes_count > 1:
+            details = f" {bagdes_count} badges found in this file. 🤔"
+        else:
+            details = ""
+
+        if content == initial_content:
+            print(f"✅ {file} already has a badge.{details}")
+        else:
+            file.write_text(content)
+            print(f"🖊  {file} now has a badge!{details}")
 
 
 @app.command()
@@ -195,10 +216,12 @@ def sync(file: Path):
     assert "complete" not in labels, "complete is a reserved label"
     labels.discard("none")
     labels.discard("solution")
+    labels.discard("all")
+    labels.add("base")
 
     # Generate notebooks
     for label in labels:
-        if label == "all":
+        if label == "base":
             base_file = file.with_name(file.name.replace("-complete", ""))
         else:
             base_file = file.with_name(file.name.replace("-complete", f"-{label}"))
@@ -217,6 +240,7 @@ def sync(file: Path):
                     "```python\n",
                     *solution_lines,
                     "```\n",
+                    "\n",
                     "</details>\n",
                     "\n",
                 ]
