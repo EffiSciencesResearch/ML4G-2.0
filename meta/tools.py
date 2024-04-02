@@ -3,6 +3,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 import json
+import sys
 import re
 from pathlib import Path
 from subprocess import check_output
@@ -16,6 +17,26 @@ app = typer.Typer()
 ROOT = Path(__file__).resolve().parent.parent
 
 RE_URL = re.compile(r"(https?://[^\s)\"]+)([\s).,\\\n]|$)")
+
+
+def gather_ipynbs(files: list[Path]) -> list[Path]:
+    """Recursively gather all the notebooks in the given directories and files.
+
+    Raises an error if a file does not exist or is not a notebook.
+    Meant for command line arguments.
+    """
+
+    ipynbs = []
+    for file in files:
+        if file.is_dir():
+            ipynbs.extend(file.rglob("*.ipynb"))
+        elif file.exists():
+            assert file.suffix == ".ipynb", f"{file} is not a notebook"
+            ipynbs.append(file)
+        else:
+            raise FileNotFoundError(file)
+
+    return ipynbs
 
 
 @dataclass
@@ -293,6 +314,31 @@ def sync(file: Path):
         print(f"📝 {base_file} generated")
 
     base_file = file.with_name(file.name.replace("-complete", ""))
+
+
+@app.command()
+def clean(files: list[Path]):
+    """Clean the output and metadata of the notebooks."""
+
+    for file in gather_ipynbs(files):
+        notebook = json.loads(file.read_text())
+
+        notebook["metadata"] = dict(
+            language_info=dict(
+                name="python",
+                pygments_lexer="ipython3",
+            )
+        )
+
+        for cell in notebook["cells"]:
+            if "outputs" in cell:
+                cell["outputs"] = []
+            if "execution_count" in cell:
+                cell["execution_count"] = None
+            if "metadata" in cell:
+                cell["metadata"] = {}
+
+        file.write_text(json.dumps(notebook, indent=1) + "\n")
 
 
 if __name__ == "__main__":

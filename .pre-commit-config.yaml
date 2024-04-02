@@ -1,4 +1,24 @@
 repos:
+-   repo: local
+    hooks:
+    -   id: clean-jupyer
+        name: remove jupyer outputs and metadata
+        files: \.ipynb$
+        language: system
+        entry: meta/tools.py
+        args:
+        - clean
+
+-   repo: local
+    hooks:
+    -   id: add-badges
+        name: update 'open in colab' badges
+        files: \.ipynb$
+        language: system
+        entry: meta/tools.py
+        args:
+        - badge
+
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
@@ -6,18 +26,21 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-added-large-files
         args: ['--maxkb=500']
+
 -   repo: https://github.com/psf/black
     rev: 24.2.0
     hooks:
     -   id: black-jupyter
+        name: format jupyter notebooks with black
         args:
         - --line-length
         - "100"
--   repo: local
-    hooks:
-    -   id: jupyer-strip-unnecessary
-        name: jupyter-strip-unnecessary
-        files: \.ipynb$
-        language: system
-        pass_filenames: true
-        entry: meta/clean-jupyter.sh
+
+# -   repo: local
+#     hooks:
+#     -   id: jupyer-strip-unnecessary
+#         name: jupyter-strip-unnecessary
+#         files: \.ipynb$
+#         language: system
+#         pass_filenames: true
+#         entry: meta/clean-jupyter.sh
