@@ -195,10 +195,12 @@ def sync(file: Path):
     assert "complete" not in labels, "complete is a reserved label"
     labels.discard("none")
     labels.discard("solution")
+    labels.discard("all")
+    labels.add("base")
 
     # Generate notebooks
     for label in labels:
-        if label == "all":
+        if label == "base":
             base_file = file.with_name(file.name.replace("-complete", ""))
         else:
             base_file = file.with_name(file.name.replace("-complete", f"-{label}"))
@@ -217,6 +219,7 @@ def sync(file: Path):
                     "```python\n",
                     *solution_lines,
                     "```\n",
+                    "\n",
                     "</details>\n",
                     "\n",
                 ]
