@@ -372,7 +372,7 @@ def list_of_workshops_readme():
             continue
 
         notebooks_links = ", ".join(
-            f"[{pretty_name(notebook.stem)}](workshops/{workshop.name}/{notebook.name})"
+            f"[{pretty_name(notebook.stem)}](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{notebook.relative_to(ROOT).as_posix()})"
             for notebook in notebooks
         )
 
