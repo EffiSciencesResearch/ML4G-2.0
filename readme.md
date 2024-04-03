@@ -8,6 +8,24 @@ The program is aimed at beginners in machine learning, but is quite ambitious, a
 We draw inspiration from the redwood mlab, and ARENA, both of which focuses mainly on the ML engineering part.
 However there are a lot more workshops on strategy, goverance and conceptual AI safety during the ML4G.
 
+
+<!-- start workshops -->
+- Gradient Descent: [SGD exercise](workshops/Gradient_Descent/SGD_exercise.ipynb), [SGD solution](workshops/Gradient_Descent/SGD_solution.ipynb)
+- agents: [agents normal](workshops/agents/agents_normal.ipynb), [agents](workshops/agents/agents.ipynb), [agents hard](workshops/agents/agents_hard.ipynb)
+- fsgm patch attack: [fsgm patch attack](workshops/fsgm_patch_attack/fsgm_patch_attack.ipynb)
+- gradcam: [gradcam](workshops/gradcam/gradcam.ipynb)
+- hyperparameters: [hyperparameters](workshops/hyperparameters/hyperparameters.ipynb)
+- optimisation: [optimisation](workshops/optimisation/optimisation.ipynb)
+- pytorch tuto: [pytorch tuto](workshops/pytorch_tuto/pytorch_tuto.ipynb)
+- rl: [DQN workbook empty hard](workshops/rl/DQN-workbook-empty-hard.ipynb), [A2C workbook complete](workshops/rl/A2C-workbook-complete.ipynb), [DQN workbook empty](workshops/rl/DQN-workbook-empty.ipynb), [A2C workbook empty](workshops/rl/A2C-workbook-empty.ipynb), [A2C workbook empty hard](workshops/rl/A2C-workbook-empty-hard.ipynb), [DQN workbook complete](workshops/rl/DQN-workbook-complete.ipynb)
+- rlhf: [rlhf](workshops/rlhf/rlhf.ipynb)
+- tensors: [tensors](workshops/tensors/tensors.ipynb)
+- transformer: [transformer](workshops/transformer/transformer.ipynb)
+- transformer interp: [Transformer Interpretebility](workshops/transformer_interp/Transformer-Interpretebility.ipynb), [transformer interp](workshops/transformer_interp/transformer_interp.ipynb)
+- vanilla policy gradient: [vanilla policy gradient](workshops/vanilla_policy_gradient/vanilla_policy_gradient.ipynb)
+<!-- end workshops -->
+
+
 ## For teachers, contributors and assistants
 
 To setup your machine for adding and editing the workshops, follow these steps:

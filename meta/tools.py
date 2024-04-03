@@ -344,5 +344,45 @@ def clean(files: list[Path]):
         file.write_text(json.dumps(notebook, indent=2) + "\n")
 
 
+@app.command()
+def list_of_workshops_readme():
+    """Update the list of workshops in the README.md file."""
+
+    def pretty_name(name: str) -> str:
+        return name.replace("-", " ").replace("_", " ")
+
+    start = "<!-- start workshops -->"
+    end = "<!-- end workshops -->"
+
+    readme = ROOT / "readme.md"
+    content = readme.read_text()
+
+    start_idx = content.index(start) + len(start)
+    end_idx = content.index(end)
+
+    end = content[end_idx:]
+    content = content[:start_idx] + "\n"
+
+    for workshop in sorted((ROOT / "workshops").iterdir()):
+        if not workshop.is_dir():
+            continue
+
+        notebooks = list(workshop.glob("*.ipynb"))
+        if not notebooks:
+            continue
+
+        notebooks_links = ", ".join(
+            f"[{pretty_name(notebook.stem)}](workshops/{workshop.name}/{notebook.name})"
+            for notebook in notebooks
+        )
+
+        workshop_name = pretty_name(workshop.name)
+        content += f"- {workshop_name}: {notebooks_links}\n"
+
+    content += end
+
+    readme.write_text(content)
+
+
 if __name__ == "__main__":
     app()
