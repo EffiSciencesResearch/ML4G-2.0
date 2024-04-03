@@ -3,6 +3,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 import json
+import sys
 import re
 from pathlib import Path
 from subprocess import check_output
@@ -16,6 +17,26 @@ app = typer.Typer()
 ROOT = Path(__file__).resolve().parent.parent
 
 RE_URL = re.compile(r"(https?://[^\s)\"]+)([\s).,\\\n]|$)")
+
+
+def gather_ipynbs(files: list[Path]) -> list[Path]:
+    """Recursively gather all the notebooks in the given directories and files.
+
+    Raises an error if a file does not exist or is not a notebook.
+    Meant for command line arguments.
+    """
+
+    ipynbs = []
+    for file in files:
+        if file.is_dir():
+            ipynbs.extend(file.rglob("*.ipynb"))
+        elif file.exists():
+            assert file.suffix == ".ipynb", f"{file} is not a notebook"
+            ipynbs.append(file)
+        else:
+            raise FileNotFoundError(file)
+
+    return ipynbs
 
 
 @dataclass
@@ -170,8 +191,9 @@ def sync(file: Path):
     All lines after annotations such as "Hide: all" or "Hide: hard" are removed.
     Those annotations should be on their own line and are removed too. Until an annotation "Hide: none".
     Labels after "Hide: <name1>, <name2>" can be arbitrary python names, but "none", "all" and "solution" are special.
-    This generates at least a notebook without the '-complete' suffix, corresponding to things hidden with "Hide: all".
-    And also notebooks names "basename-suffix.ipynb" for each suffix.
+    This generates notebooks "basename_suffix.ipynb" for each suffix found in the file.
+    It will always generate a "basename_normal.ipynb" notebook.
+    Replace hidden stuff with "..."
 
     Example:
 
@@ -189,15 +211,12 @@ def sync(file: Path):
     ```
 
     Will generate:
-    - basename.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "...", "Visible again"
-    - basename-hard.ipynb: "Always visible", "...", "Visible again"
+    - basename_normal.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "...", "Visible again"
+    - basename_hard.ipynb: "Always visible", "...", "Visible again"
     And the solution after this cell will contain everything but the "..." line.
     """
 
     assert file.exists(), f"{file} does not exist"
-    assert file.name.endswith(
-        "-complete.ipynb"
-    ), "Solution notebook must end with '-complete.ipynb'"
 
     notebook = json.loads(file.read_text())
 
@@ -213,18 +232,14 @@ def sync(file: Path):
             for line in cell["source"]:
                 labels = labels.union(parse_hide(line))
 
-    assert "complete" not in labels, "complete is a reserved label"
     labels.discard("none")
     labels.discard("solution")
     labels.discard("all")
-    labels.add("base")
+    labels.add("normal")
 
     # Generate notebooks
     for label in labels:
-        if label == "base":
-            base_file = file.with_name(file.name.replace("-complete", ""))
-        else:
-            base_file = file.with_name(file.name.replace("-complete", f"-{label}"))
+        base_file = file.with_stem(file.stem + f"_{label}")
 
         new_notebook = deepcopy(notebook)
         new_cells = []
@@ -263,6 +278,10 @@ def sync(file: Path):
                 new_lines = []
                 for line in cell["source"]:
                     hides_defined_here = parse_hide(line)
+
+                    last_line = new_lines[-1] if new_lines else ""
+                    last_hide = hide
+
                     if "solution" in hides_defined_here:
                         hide_in_solution = True
                     elif hides_defined_here:
@@ -274,6 +293,11 @@ def sync(file: Path):
                         hide = True
                     elif hides_defined_here:
                         hide = False
+
+                    # We started hidding stuff, and previous line was not "..."
+                    if hide and not last_hide and last_line.strip() != "...":
+                        space = line.partition("#")[0]
+                        new_lines.append(space + "...\n")
 
                     if not hide and not hides_defined_here:
                         new_lines.append(line)
@@ -293,6 +317,71 @@ def sync(file: Path):
         print(f"📝 {base_file} generated")
 
     base_file = file.with_name(file.name.replace("-complete", ""))
+
+
+@app.command()
+def clean(files: list[Path]):
+    """Clean the output and metadata of the notebooks."""
+
+    for file in gather_ipynbs(files):
+        notebook = json.loads(file.read_text())
+
+        notebook["metadata"] = dict(
+            language_info=dict(
+                name="python",
+                pygments_lexer="ipython3",
+            )
+        )
+
+        for cell in notebook["cells"]:
+            if "outputs" in cell:
+                cell["outputs"] = []
+            if "execution_count" in cell:
+                cell["execution_count"] = None
+            if "metadata" in cell:
+                cell["metadata"] = {}
+
+        file.write_text(json.dumps(notebook, indent=2) + "\n")
+
+
+@app.command()
+def list_of_workshops_readme():
+    """Update the list of workshops in the README.md file."""
+
+    def pretty_name(name: str) -> str:
+        return name.replace("-", " ").replace("_", " ")
+
+    start = "<!-- start workshops -->"
+    end = "<!-- end workshops -->"
+
+    readme = ROOT / "readme.md"
+    content = readme.read_text()
+
+    start_idx = content.index(start) + len(start)
+    end_idx = content.index(end)
+
+    end = content[end_idx:]
+    content = content[:start_idx] + "\n"
+
+    for workshop in sorted((ROOT / "workshops").iterdir()):
+        if not workshop.is_dir():
+            continue
+
+        notebooks = list(workshop.glob("*.ipynb"))
+        if not notebooks:
+            continue
+
+        notebooks_links = ", ".join(
+            f"[{pretty_name(notebook.stem)}](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{notebook.relative_to(ROOT).as_posix()})"
+            for notebook in notebooks
+        )
+
+        workshop_name = pretty_name(workshop.name)
+        content += f"- {workshop_name}: {notebooks_links}\n"
+
+    content += end
+
+    readme.write_text(content)
 
 
 if __name__ == "__main__":
