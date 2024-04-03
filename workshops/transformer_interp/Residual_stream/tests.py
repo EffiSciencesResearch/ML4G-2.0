@@ -2,7 +2,7 @@ import torch as t
 from einops import repeat
 
 
-def logit_lense_analysis(input_prompt: str, gpt2_small):
+def logit_lens_analysis(input_prompt: str, gpt2_small):
     """
     Performs logit lens analysis on the given input prompt.
 
@@ -55,7 +55,7 @@ def logit_lense_analysis(input_prompt: str, gpt2_small):
     return tokens, top_unembedded_residual_stream_caches, kl_divergences
 
 
-def test_logit_lense_analysis(implementation_function, model):
+def test_logit_lens_analysis(implementation_function, model):
     input_prompt = "The quick brown fox jumps over the lazy dog."
     tokens, top_unembedded_residual_stream_caches, kl_divergences = implementation_function(
         input_prompt
@@ -65,7 +65,7 @@ def test_logit_lense_analysis(implementation_function, model):
         comparison_tokens,
         comparison_top_unembedded_residual_stream_caches,
         comparison_kl_divergences,
-    ) = logit_lense_analysis(input_prompt, model)
+    ) = logit_lens_analysis(input_prompt, model)
 
     assert t.allclose(tokens, comparison_tokens)
     assert t.allclose(
@@ -75,7 +75,7 @@ def test_logit_lense_analysis(implementation_function, model):
     )
     assert t.allclose(kl_divergences, comparison_kl_divergences, atol=1e-3)
 
-    print("Logit lense analysis test passed")
+    print("Logit lens analysis test passed")
 
 
 def prompt_to_residual_stream_activations(prompt, demarcation_token, gpt2_small):
