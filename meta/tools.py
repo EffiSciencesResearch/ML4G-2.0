@@ -191,8 +191,9 @@ def sync(file: Path):
     All lines after annotations such as "Hide: all" or "Hide: hard" are removed.
     Those annotations should be on their own line and are removed too. Until an annotation "Hide: none".
     Labels after "Hide: <name1>, <name2>" can be arbitrary python names, but "none", "all" and "solution" are special.
-    This generates at least a notebook without the '-complete' suffix, corresponding to things hidden with "Hide: all".
-    And also notebooks names "basename-suffix.ipynb" for each suffix.
+    This generates notebooks "basename_suffix.ipynb" for each suffix found in the file.
+    It will always generate a "basename_normal.ipynb" notebook.
+    Replace hidden stuff with "..."
 
     Example:
 
@@ -210,15 +211,12 @@ def sync(file: Path):
     ```
 
     Will generate:
-    - basename.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "...", "Visible again"
-    - basename-hard.ipynb: "Always visible", "...", "Visible again"
+    - basename_normal.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "...", "Visible again"
+    - basename_hard.ipynb: "Always visible", "...", "Visible again"
     And the solution after this cell will contain everything but the "..." line.
     """
 
     assert file.exists(), f"{file} does not exist"
-    assert file.name.endswith(
-        "-complete.ipynb"
-    ), "Solution notebook must end with '-complete.ipynb'"
 
     notebook = json.loads(file.read_text())
 
@@ -234,18 +232,14 @@ def sync(file: Path):
             for line in cell["source"]:
                 labels = labels.union(parse_hide(line))
 
-    assert "complete" not in labels, "complete is a reserved label"
     labels.discard("none")
     labels.discard("solution")
     labels.discard("all")
-    labels.add("base")
+    labels.add("normal")
 
     # Generate notebooks
     for label in labels:
-        if label == "base":
-            base_file = file.with_name(file.name.replace("-complete", ""))
-        else:
-            base_file = file.with_name(file.name.replace("-complete", f"-{label}"))
+        base_file = file.with_stem(file.stem + f"_{label}")
 
         new_notebook = deepcopy(notebook)
         new_cells = []
@@ -284,6 +278,10 @@ def sync(file: Path):
                 new_lines = []
                 for line in cell["source"]:
                     hides_defined_here = parse_hide(line)
+
+                    last_line = new_lines[-1] if new_lines else ""
+                    last_hide = hide
+
                     if "solution" in hides_defined_here:
                         hide_in_solution = True
                     elif hides_defined_here:
@@ -295,6 +293,11 @@ def sync(file: Path):
                         hide = True
                     elif hides_defined_here:
                         hide = False
+
+                    # We started hidding stuff, and previous line was not "..."
+                    if hide and not last_hide and last_line.strip() != "...":
+                        space = line.partition("#")[0]
+                        new_lines.append(space + "...\n")
 
                     if not hide and not hides_defined_here:
                         new_lines.append(line)
@@ -338,7 +341,7 @@ def clean(files: list[Path]):
             if "metadata" in cell:
                 cell["metadata"] = {}
 
-        file.write_text(json.dumps(notebook, indent=1) + "\n")
+        file.write_text(json.dumps(notebook, indent=2) + "\n")
 
 
 if __name__ == "__main__":

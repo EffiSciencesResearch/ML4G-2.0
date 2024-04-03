@@ -94,17 +94,14 @@ Note:
 1. You can use multiple names in a hide comment, such as `# Hide: hard, solution`, which will then be shown only in the `normal` notebook, and note in code cells.
 1. A `# Hide:` directives hides every line until the end of the cell, or until the next `# Hide:` directive, which always resets what is hidden.
 1. The `# Hide: <name>` comments must be on their own line.
+1. The hide directive is replace by `...` if none were already present just before.
 
 Example:
 ```python
 print("This will be shown in all notebooks")
-# Hide: solution, normal
-...
 # Hide: hard
 for i in range(10):
     print("This will be shown only in the normal notebook")
-    # Hide: solution, hard
-    ...
     # Hide: all
     print("This will be shown only in the solution")
 # Hide: none
