@@ -8,7 +8,6 @@ black[jupyter]
 einops
 ipykernel
 ipywidgets
-torchvision
 jaxtyping
 jupyter
 matplotlib
@@ -19,13 +18,15 @@ plotly
 pre-commit
 pytest
 rich
+scikit-learn
+toml
+torchvision
 tqdm
-transformer_utils
 transformer_lens
+transformer_utils
 transformers
 typeguard
 typer
-scikit-learn
 
 # accelerate
 # black
