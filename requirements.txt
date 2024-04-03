@@ -17,6 +17,7 @@ openai
 pandas
 plotly
 pre-commit
+pytest
 rich
 tqdm
 transformer_utils
@@ -38,7 +39,6 @@ scikit-learn
 # mediapy
 # numpy-stl
 # pygame
-# pytest
 # requests
 # sentence-transformers
 # sympy
