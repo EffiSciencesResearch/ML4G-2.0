@@ -25,9 +25,7 @@ def logit_lense_analysis(input_prompt: str, gpt2_small):
     num_layers = len(gpt2_small.blocks)
 
     # Extract the residual stream caches from the cache
-    residual_stream_caches = [
-        cache[f"blocks.{i}.ln2.hook_normalized"] for i in range(num_layers)
-    ]
+    residual_stream_caches = [cache[f"blocks.{i}.ln2.hook_normalized"] for i in range(num_layers)]
 
     # Stack the residual stream caches along the layer dimension
     residual_stream_caches = t.stack(residual_stream_caches, dim=1)
@@ -36,14 +34,10 @@ def logit_lense_analysis(input_prompt: str, gpt2_small):
     unembedded_residual_stream_caches = gpt2_small.unembed(residual_stream_caches)
 
     # Transform the unembedded residual stream caches into log probabilities
-    unembedded_residual_stream_caches = unembedded_residual_stream_caches.log_softmax(
-        dim=-1
-    )
+    unembedded_residual_stream_caches = unembedded_residual_stream_caches.log_softmax(dim=-1)
 
     # Get the top unembedded residual stream caches
-    top_unembedded_residual_stream_caches = t.argmax(
-        unembedded_residual_stream_caches, dim=-1
-    )
+    top_unembedded_residual_stream_caches = t.argmax(unembedded_residual_stream_caches, dim=-1)
 
     # Create a tensor of the same shape as the final logits of the model at each position
     final_logits = repeat(
@@ -63,8 +57,8 @@ def logit_lense_analysis(input_prompt: str, gpt2_small):
 
 def test_logit_lense_analysis(implementation_function, model):
     input_prompt = "The quick brown fox jumps over the lazy dog."
-    tokens, top_unembedded_residual_stream_caches, kl_divergences = (
-        implementation_function(input_prompt)
+    tokens, top_unembedded_residual_stream_caches, kl_divergences = implementation_function(
+        input_prompt
     )
 
     (
@@ -114,9 +108,7 @@ def prompt_to_residual_stream_activations(prompt, demarcation_token, gpt2_small)
     num_layers = len(gpt2_small.blocks)
 
     # Extract the residual stream activations from the cache for each layer
-    residual_stream_caches = [
-        cache[f"blocks.{i}.ln2.hook_normalized"] for i in range(num_layers)
-    ]
+    residual_stream_caches = [cache[f"blocks.{i}.ln2.hook_normalized"] for i in range(num_layers)]
 
     # Stack the residual stream activations along a new dimension
     residual_stream_caches = t.stack(residual_stream_caches, dim=1)
