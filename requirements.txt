@@ -27,6 +27,7 @@ transformer_utils
 transformers
 typeguard
 typer
+circuitsvis
 
 # accelerate
 # black

@@ -5,8 +5,9 @@ repos:
         name: remove jupyer outputs and metadata
         files: \.ipynb$
         language: system
-        entry: meta/tools.py
-        args:
+        entry: python
+        args: 
+        - meta/tools.py
         - clean
 
     -   id: update-readme
