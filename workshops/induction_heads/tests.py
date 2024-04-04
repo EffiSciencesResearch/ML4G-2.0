@@ -178,8 +178,8 @@ def test_current_attn_detector(implementations, model):
     )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
-    result = current_attn_detector(cache)
-    comparison = implementations(cache)
+    result = current_attn_detector(cache, threshold=0.2)
+    comparison = implementations(cache, threshold=0.2)
     assert result == comparison
     print("Current attention detector test passed!")
 
@@ -190,8 +190,8 @@ def test_prev_attn_detector(implementations, model):
     )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
-    result = prev_attn_detector(cache)
-    comparison = implementations(cache)
+    result = prev_attn_detector(cache, threshold=0.2)
+    comparison = implementations(cache, threshold=0.2)
     assert result == comparison
     print("Previous attention detector test passed!")
 
@@ -202,8 +202,8 @@ def test_first_attn_detector(implementations, model):
     )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
-    result = first_attn_detector(cache)
-    comparison = implementations(cache)
+    result = first_attn_detector(cache, threshold=0.2)
+    comparison = implementations(cache, threshold=0.2)
     assert result == comparison
     print("First attention detector test passed!")
 
@@ -214,8 +214,8 @@ def test_induction_attn_detector(implementations, model):
     )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
-    result = induction_attn_detector(cache, tokens)
-    comparison = implementations(cache, tokens)
+    result = induction_attn_detector(cache, tokens, threshold=0.2)
+    comparison = implementations(cache, tokens, threshold=0.2)
     assert result == comparison
     print("Induction attention detector test passed!")
 
@@ -226,7 +226,7 @@ def test_induction_attn_detector(implementations, model):
     )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
-    result = induction_attn_detector(cache, tokens)
-    comparison = implementations(cache, tokens)
+    result = induction_attn_detector(cache, tokens, threshold=0.2)
+    comparison = implementations(cache, tokens, threshold=0.2)
     assert result == comparison
     print("Induction attention detector test passed!")
