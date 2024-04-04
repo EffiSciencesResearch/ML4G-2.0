@@ -317,8 +317,8 @@ def sync(file: Path):
 
         base_file.write_text(json.dumps(new_notebook, indent=2))
         print(f"📝 {base_file} generated")
-
-    base_file = file.with_name(file.name.replace("-complete", ""))
+        # Make it read only, to avoid accidental modifications
+        base_file.chmod(0o444)
 
 
 @app.command()
