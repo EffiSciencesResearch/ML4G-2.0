@@ -76,18 +76,18 @@ def average_over_condition(tensor, condition):
     )
 
 
-def over_threshhold_attn(cache, condition, threshhold=0.5, sorce="pattern"):
+def over_threshold_attn(cache, condition, threshold=0.5, sorce="pattern"):
     return_values = []
 
     for layer, pattern in enumerate(cache.stack_activation("pattern")):
         scores = average_over_condition(pattern, condition)
-        indices = [i for i, s in enumerate(scores) if s > threshhold]
+        indices = [i for i, s in enumerate(scores) if s > threshold]
         for i in indices:
             return_values.append(f"L{layer+1}H{i}")
     return return_values
 
 
-def current_attn_detector(cache: ActivationCache, threshhold=0.3) -> List[str]:
+def current_attn_detector(cache: ActivationCache, threshold=0.3) -> List[str]:
     """
     Returns a list e.g. ["0.2", "1.4", "1.9"] of "layer.head" which you judge to be current-token heads
     """
@@ -95,10 +95,10 @@ def current_attn_detector(cache: ActivationCache, threshhold=0.3) -> List[str]:
     def cond(i, j):
         return i == j
 
-    return over_threshhold_attn(cache, cond, threshhold=threshhold)
+    return over_threshold_attn(cache, cond, threshold=threshold)
 
 
-def prev_attn_detector(cache: ActivationCache, threshhold=0.3) -> List[str]:
+def prev_attn_detector(cache: ActivationCache, threshold=0.3) -> List[str]:
     """
     Returns a list e.g. ["0.2", "1.4", "1.9"] of "layer.head" which you judge to be prev-token heads
     """
@@ -106,10 +106,10 @@ def prev_attn_detector(cache: ActivationCache, threshhold=0.3) -> List[str]:
     def cond(i, j):
         return i - j == 1
 
-    return over_threshhold_attn(cache, cond, threshhold=threshhold)
+    return over_threshold_attn(cache, cond, threshold=threshold)
 
 
-def first_attn_detector(cache: ActivationCache, threshhold=0.3) -> List[str]:
+def first_attn_detector(cache: ActivationCache, threshold=0.3) -> List[str]:
     """
     Returns a list e.g. ["0.2", "1.4", "1.9"] of "layer.head" which you judge to be first-token heads
     """
@@ -117,7 +117,7 @@ def first_attn_detector(cache: ActivationCache, threshhold=0.3) -> List[str]:
     def cond(i, j):
         return j == 0
 
-    return over_threshhold_attn(cache, cond, threshhold=threshhold)
+    return over_threshold_attn(cache, cond, threshold=threshold)
 
 
 def find_repeating_rows(tensor):
@@ -145,7 +145,7 @@ def find_repeating_rows(tensor):
 
 
 def induction_attn_detector(
-    cache: ActivationCache, tokens, off_by_one=True, threshhold=0.3
+    cache: ActivationCache, tokens, off_by_one=True, threshold=0.3
 ) -> List[str]:
     """
     Returns a list e.g. ["0.2", "1.4", "1.9"] of "layer.head" which you judge to be induction heads
@@ -160,7 +160,7 @@ def induction_attn_detector(
         to_add = 1 if off_by_one else 0
         return repeat_dict[i] + to_add == j
 
-    return over_threshhold_attn(cache, cond, threshhold=threshhold)
+    return over_threshold_attn(cache, cond, threshold=threshold)
 
 
 def test_average_over_condition(implementations):
