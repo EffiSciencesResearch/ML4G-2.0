@@ -1,4 +1,14 @@
 repos:
+
+-   repo: https://github.com/psf/black
+    rev: 24.2.0
+    hooks:
+    -   id: black-jupyter
+        name: format jupyter notebooks with black
+        args:
+        - --line-length
+        - "100"
+
 -   repo: local
     hooks:
     -   id: clean-jupyer
@@ -6,7 +16,7 @@ repos:
         files: \.ipynb$
         language: system
         entry: python
-        args: 
+        args:
         - meta/tools.py
         - clean
 
@@ -35,21 +45,3 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-added-large-files
         args: ['--maxkb=500']
-
--   repo: https://github.com/psf/black
-    rev: 24.2.0
-    hooks:
-    -   id: black-jupyter
-        name: format jupyter notebooks with black
-        args:
-        - --line-length
-        - "100"
-
-# -   repo: local
-#     hooks:
-#     -   id: jupyer-strip-unnecessary
-#         name: jupyter-strip-unnecessary
-#         files: \.ipynb$
-#         language: system
-#         pass_filenames: true
-#         entry: meta/clean-jupyter.sh
