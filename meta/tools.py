@@ -2,13 +2,17 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
+import difflib
 import json
+import openai
+import os
 import sys
 import re
 from pathlib import Path
 from subprocess import check_output
 from typing import Iterator
 
+import rich.color
 import typer
 from rich import print as rprint
 
@@ -384,6 +388,149 @@ def list_of_workshops_readme():
     content += end
 
     readme.write_text(content)
+
+
+def fix_typos_lines(lines: list[str]):
+    if not lines:
+        return []
+
+    content = "".join(lines)
+    if len(content) > 1000:
+        split = len(lines) // 2
+        first = fix_typos_lines(lines[:split])
+        if not first.endswith("\n"):
+            first += "\n"
+        return first + fix_typos_lines(lines[split:])
+
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": """Fix the typos and language from the user.
+You receive both python code and markdown text.
+Keep your edits minimal and keep the same amount of newlines and the start and end. You should never add or remove triple backticks (```).
+The text you receive is part of larger files, and your edits are concatenated back.""",
+            },
+            {"role": "user", "content": content},
+        ],
+    )
+    return response.choices[0].message.content
+
+
+def fmt(
+    text: str,
+    fg: int | tuple[int, int, int] = None,
+    bg: int | tuple[int, int, int] = None,
+    underline: bool = False,
+) -> str:
+    """Format the text with the given colors."""
+
+    mods = ""
+
+    if underline:
+        mods += "\033[4m"
+
+    if fg is not None:
+        if isinstance(fg, int):
+            mods += f"\033[38;5;{fg}m"
+        else:
+            mods += f"\033[38;2;{fg[0]};{fg[1]};{fg[2]}m"
+
+    if bg is not None:
+        if isinstance(bg, int):
+            mods += f"\033[48;5;{bg}m"
+        else:
+            mods += f"\033[48;2;{bg[0]};{bg[1]};{bg[2]}m"
+
+    if mods:
+        text = mods + text + "\033[0m"
+
+    return text
+
+
+def fmt_diff(diff: list[str]) -> tuple[str, str]:
+    """Format the output of difflib.ndiff.
+
+    Returns:
+        tuple[str, str]: The two strings (past, new) with the differences highlighted in ANSI colors.
+    """
+
+    past = ""
+    new = ""
+    for line in diff:
+        mark = line[0]
+        line = line[2:]
+        match mark:
+            case " ":
+                past += line
+                new += line
+            case "-":
+                past += fmt(line, fg=1, underline=True)
+            case "+":
+                new += fmt(line, fg=2, underline=True)
+            case "?":
+                pass
+
+    return past, new
+
+
+@app.command()
+def fix_typos(file: Path):
+    """Fix typos in the given file using gpt-3.5.
+
+    Your API key should be in the environment variable OPENAI_API_KEY.
+    """
+
+    assert file.suffix == ".ipynb", f"{file} is not a notebook"
+
+    notebook = json.loads(file.read_text())
+
+    for cell in notebook["cells"]:
+        initial = "".join(cell["source"])
+        # Gray
+        print(fmt(initial, fg=8))
+
+        new = fix_typos_lines(cell["source"])
+
+        if new == initial:
+            print("✅ No typos found")
+            continue
+
+        # Compute the difference between the two texts
+        words1 = re.findall(r"(\w+|\W+)", initial.strip())
+        words2 = re.findall(r"(\w+|\W+)", new.strip())
+
+        diff = difflib.ndiff(words1, words2)
+        initial_formated, new_formated = fmt_diff(diff)
+        print(initial_formated)
+        print(new_formated)
+
+        # Ask for confirmation, and allow the user to edit the cell if needed
+        while True:
+            cmd = input(
+                "Accept (enter), edit new (e), edit old (o), skip (s), save and quit (q): "
+            ).lower()
+            if not cmd or cmd in list("eosq"):
+                break
+
+        if cmd == "e":
+            edited = typer.edit(new)
+            if edited is not None:
+                new = edited
+        elif cmd == "o":
+            edited = typer.edit(initial)
+            if edited is not None:
+                initial = edited
+        elif cmd == "s":
+            continue
+        elif cmd == "q":
+            break
+
+        cell["source"] = new.splitlines(keepends=True)
+
+    file.write_text(json.dumps(notebook, indent=2) + "\n")
+    print("✅ Saved!")
 
 
 if __name__ == "__main__":
