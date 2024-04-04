@@ -67,11 +67,13 @@ def test_logit_attribution(implementation, model):
 
 def average_over_condition(tensor, condition):
     I, J, K = tensor.shape
-    return [
-        sum(tensor[i, j, k] for j in range(J) for k in range(K) if condition(j, k))
-        / sum(condition(j, k) for j in range(J) for k in range(K))
-        for i in range(I)
-    ]
+    return t.tensor(
+        [
+            sum(tensor[i, j, k] for j in range(J) for k in range(K) if condition(j, k))
+            / sum(condition(j, k) for j in range(J) for k in range(K))
+            for i in range(I)
+        ]
+    )
 
 
 def over_threshhold_attn(cache, condition, threshhold=0.5, sorce="pattern"):
@@ -150,7 +152,7 @@ def induction_attn_detector(
 
     Remember - the tokens used to generate rep_cache are (bos_token, *rand_tokens, *rand_tokens)
     """
-    repeat_dict = find_repeating_rows(t.tensor(tokens))
+    repeat_dict = find_repeating_rows(tokens)
 
     def cond(i, j):
         if i not in repeat_dict.keys():
