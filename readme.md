@@ -22,7 +22,7 @@ However there are a lot more workshops on strategy, goverance and conceptual AI 
 - rlhf: [rlhf](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/rlhf/rlhf.ipynb)
 - tensors: [tensors](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/tensors/tensors.ipynb)
 - transformer: [transformer](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/transformer/transformer.ipynb)
-- transformer interp: [Transformer Interpretebility](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/transformer_interp/Transformer-Interpretebility.ipynb), [transformer interp](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/transformer_interp/transformer_interp.ipynb)
+- transformer interp: [transformer interp](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/transformer_interp/transformer_interp.ipynb)
 - vanilla policy gradient: [vanilla policy gradient](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/vanilla_policy_gradient/vanilla_policy_gradient.ipynb)
 <!-- end workshops -->
 

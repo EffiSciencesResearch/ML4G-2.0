@@ -7,7 +7,7 @@ import sys
 import re
 from pathlib import Path
 from subprocess import check_output
-from typing import Generator, Iterator
+from typing import Iterator
 
 import typer
 from rich import print as rprint
@@ -156,14 +156,16 @@ def badge(files: list[Path]):
         initial_content = content
 
         relative_path = file.resolve().relative_to(ROOT)
-        badge_content = BADGE_TEMPLATE.format(repo_path=f"ML4G-2.0/blob/master/{relative_path}")
-        badge_content = badge_content.replace('"', r"\"")
+        badge_content = BADGE_TEMPLATE.format(
+            repo_path=f"ML4G-2.0/blob/master/{relative_path.as_posix()}"
+        )
+        badge_content_escaped = badge_content.replace('"', '\\"')
 
         # Sync the badge and file name
-        content = RE_BADGE.sub(badge_content, content)
+        content = RE_BADGE.sub(badge_content_escaped, content)
 
         # Add the badge in the first cell if it is not present
-        if badge_content not in content:
+        if badge_content_escaped not in content:
             parsed = json.loads(content)
             for cell in parsed["cells"]:
                 if cell["cell_type"] == "markdown":
