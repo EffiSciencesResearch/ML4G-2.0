@@ -162,9 +162,7 @@ def induction_attn_detector(
 
 
 def test_average_over_condition(implementations):
-    tensor = t.tensor(
-        [[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]], [[0.7, 0.8, 0.9], [0.1, 0.2, 0.3]]]
-    )
+    tensor = t.tensor([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]], [[0.7, 0.8, 0.9], [0.1, 0.2, 0.3]]])
     condition = lambda i, j: i == j
     result = average_over_condition(tensor, condition)
     comparison = implementations(tensor, condition)
@@ -173,7 +171,9 @@ def test_average_over_condition(implementations):
 
 
 def test_current_attn_detector(implementations, model):
-    test_string = "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    test_string = (
+        "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
     result = current_attn_detector(cache)
@@ -183,7 +183,9 @@ def test_current_attn_detector(implementations, model):
 
 
 def test_prev_attn_detector(implementations, model):
-    test_string = "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    test_string = (
+        "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
     result = prev_attn_detector(cache)
@@ -193,7 +195,9 @@ def test_prev_attn_detector(implementations, model):
 
 
 def test_first_attn_detector(implementations, model):
-    test_string = "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    test_string = (
+        "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
     result = first_attn_detector(cache)
@@ -203,7 +207,9 @@ def test_first_attn_detector(implementations, model):
 
 
 def test_induction_attn_detector(implementations, model):
-    test_string = "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    test_string = (
+        "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
     result = induction_attn_detector(cache, tokens)
@@ -213,7 +219,9 @@ def test_induction_attn_detector(implementations, model):
 
 
 def test_induction_attn_detector(implementations, model):
-    test_string = "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    test_string = (
+        "The quick brown fox jumps over the lazy dog.The quick brown fox jumps over the lazy dog."
+    )
     tokens = model.to_tokens(test_string)
     _, cache = model.run_with_cache(tokens, remove_batch_dim=True)
     result = induction_attn_detector(cache, tokens)
