@@ -30,9 +30,7 @@ def test_SGD(optimizer_class):
     learning_rate = 0.001
     optimizer = optimizer_class(parameters, learning_rate)
 
-    test_trajectory = optimize_function(
-        rosenbrocks_banana, parameters, optimizer, N_steps
-    )
+    test_trajectory = optimize_function(rosenbrocks_banana, parameters, optimizer, N_steps)
 
     parameters = t.tensor([-1.0, 2.0], requires_grad=True)
     solution_optimizer = t.optim.SGD([parameters], lr=learning_rate)
@@ -51,15 +49,11 @@ def test_momentum(optimizer_class):
     learning_rate = 0.001
     optimizer = optimizer_class(parameters, learning_rate, momentum=0.9)
 
-    test_trajectory = optimize_function(
-        rosenbrocks_banana, parameters, optimizer, N_steps
-    )
+    test_trajectory = optimize_function(rosenbrocks_banana, parameters, optimizer, N_steps)
 
     parameters = t.tensor([-1.0, 2.0], requires_grad=True)
     adjested_learning_rate = learning_rate * (1 - 0.9)
-    solution_optimizer = t.optim.SGD(
-        [parameters], lr=adjested_learning_rate, momentum=0.9
-    )
+    solution_optimizer = t.optim.SGD([parameters], lr=adjested_learning_rate, momentum=0.9)
     solution_trajectory = optimize_function(
         rosenbrocks_banana, parameters, solution_optimizer, N_steps
     )
@@ -74,18 +68,12 @@ def test_RMSprop(optimizer_class):
     N_steps = 100
     learning_rate = 0.001
     epsilon = 1e-8
-    optimizer = optimizer_class(
-        parameters, learning_rate, momentum=0.9, epsilon=epsilon
-    )
+    optimizer = optimizer_class(parameters, learning_rate, momentum=0.9, epsilon=epsilon)
 
-    test_trajectory = optimize_function(
-        rosenbrocks_banana, parameters, optimizer, N_steps
-    )
+    test_trajectory = optimize_function(rosenbrocks_banana, parameters, optimizer, N_steps)
 
     parameters = t.tensor([-1.0, 2.0], requires_grad=True)
-    solution_optimizer = t.optim.RMSprop(
-        [parameters], lr=learning_rate, alpha=0.9, eps=epsilon
-    )
+    solution_optimizer = t.optim.RMSprop([parameters], lr=learning_rate, alpha=0.9, eps=epsilon)
     solution_trajectory = optimize_function(
         rosenbrocks_banana, parameters, solution_optimizer, N_steps
     )
@@ -108,14 +96,10 @@ def test_Adam(optimizer_class):
         epsilon=epsilon,
     )
 
-    test_trajectory = optimize_function(
-        rosenbrocks_banana, parameters, optimizer, N_steps
-    )
+    test_trajectory = optimize_function(rosenbrocks_banana, parameters, optimizer, N_steps)
 
     parameters = t.tensor([-1.0, 2.0], requires_grad=True)
-    solution_optimizer = t.optim.Adam(
-        [parameters], lr=learning_rate, betas=(0.9, 0.999)
-    )
+    solution_optimizer = t.optim.Adam([parameters], lr=learning_rate, betas=(0.9, 0.999))
     solution_trajectory = optimize_function(
         rosenbrocks_banana, parameters, solution_optimizer, N_steps
     )
@@ -153,14 +137,11 @@ def plot_rosenbrock(
             trajectory[:, 1],
             rosenbrocks_banana(trajectory[:, 0], trajectory[:, 1]),
             label=label,
-            linewidth=4.0,
+            linewidth=2.0,
         )
     # plot the global minimum
     ax1.scatter(
-        *global_minimum,
-        rosenbrocks_banana(*global_minimum),
-        color="red",
-        label="Global Minimum"
+        *global_minimum, rosenbrocks_banana(*global_minimum), color="red", label="Global Minimum"
     )
 
     ax1.set(xlabel="x", ylabel="y", zlabel="z")
@@ -177,7 +158,7 @@ def plot_rosenbrock(
     cbar.ax.set_ylabel("Function Value")
 
     for label, trajectory in trajectories.items():
-        ax2.plot(trajectory[:, 0], trajectory[:, 1], label=label, linewidth=4.0)
+        ax2.plot(trajectory[:, 0], trajectory[:, 1], label=label, linewidth=1.0, marker="+")
 
     # plot the global minimum
     ax2.scatter(*global_minimum, color="red", label="Global Minimum")
