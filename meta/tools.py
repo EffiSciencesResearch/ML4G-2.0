@@ -321,8 +321,6 @@ def sync(file: Path):
 
         base_file.write_text(json.dumps(new_notebook, indent=2))
         print(f"📝 {base_file} generated")
-        # Make it read only, to avoid accidental modifications
-        base_file.chmod(0o444)
 
 
 @app.command()
@@ -395,7 +393,7 @@ def fix_typos_lines(lines: list[str]):
         return []
 
     content = "".join(lines)
-    if len(content) > 1000:
+    if len(content) > 4000:
         split = len(lines) // 2
         first = fix_typos_lines(lines[:split])
         if not first.endswith("\n"):
@@ -409,11 +407,19 @@ def fix_typos_lines(lines: list[str]):
                 "role": "system",
                 "content": """Fix the typos and language from the user.
 You receive both python code and markdown text.
-Keep your edits minimal and keep the same amount of newlines and the start and end. You should never add or remove triple backticks (```).
+Keep your edits minimal and keep the same amount of newlines and the start and end.
 The text you receive is part of larger files, and your edits are concatenated back.""",
             },
             {"role": "user", "content": content},
         ],
+        # We don't want it to wrap stuff in code/md blocks. Those are all the tokens with two backticks.
+        # We don't want to remove " `" though, as it is used for inline code.
+        logit_bias={
+            7559: -2,  # ' ``'
+            11592: -2,  #' ``('
+            15506: -2,  # '``'
+            33153: -2,  # '````'
+        },
     )
     return response.choices[0].message.content
 
@@ -476,7 +482,7 @@ def fmt_diff(diff: list[str]) -> tuple[str, str]:
 
 
 @app.command()
-def fix_typos(file: Path):
+def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
     """Fix typos in the given file using gpt-3.5.
 
     Your API key should be in the environment variable OPENAI_API_KEY.
@@ -486,7 +492,31 @@ def fix_typos(file: Path):
 
     notebook = json.loads(file.read_text())
 
-    for cell in notebook["cells"]:
+    if select_cells:
+        cells = []
+        for idx, cell in enumerate(notebook["cells"]):
+            if cell["cell_type"] != "markdown" and not code_too:
+                continue
+            content = "".join(cell["source"])
+            start = content[:100].strip().replace("\n", "\\n")
+            cells.append(f"{idx}: {cell['cell_type']}\t-- {start}...")
+
+        edit = "Keep the cells you want to edit, delete the others:\n\n" + "\n".join(cells)
+        selected = typer.edit(edit)
+        if selected is None:
+            selected = edit
+
+        selected = [int(match) for match in re.findall(r"^(\d+):", selected, re.MULTILINE)]
+    elif code_too:
+        selected = range(len(notebook["cells"]))
+    else:
+        selected = [
+            idx for idx, cell in enumerate(notebook["cells"]) if cell["cell_type"] == "markdown"
+        ]
+
+    for cell_idx in selected:
+        cell = notebook["cells"][cell_idx]
+
         initial = "".join(cell["source"])
         # Gray
         print(fmt(initial, fg=8))
