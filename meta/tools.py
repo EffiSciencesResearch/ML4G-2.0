@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 
 from copy import deepcopy
 from dataclasses import dataclass
