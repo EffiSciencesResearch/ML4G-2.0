@@ -375,6 +375,7 @@ def list_of_workshops_readme():
         if not notebooks:
             continue
 
+        notebooks.sort()
         notebooks_links = ", ".join(
             f"[{pretty_name(notebook.stem)}](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/{notebook.relative_to(ROOT).as_posix()})"
             for notebook in notebooks
