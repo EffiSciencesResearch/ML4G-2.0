@@ -16,7 +16,7 @@ import rich.color
 import typer
 from rich import print as rprint
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True, add_completion=False)
 
 ROOT = Path(__file__).resolve().parent.parent
 
