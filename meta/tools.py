@@ -260,6 +260,7 @@ def sync(file: Path):
                     "\n",
                     "```python\n",
                     *solution_lines,
+                    "\n",
                     "```\n",
                     "\n",
                     "</details>\n",
@@ -321,6 +322,18 @@ def sync(file: Path):
 
         base_file.write_text(json.dumps(new_notebook, indent=2))
         print(f"📝 {base_file} generated")
+
+
+@app.command()
+def sync_all(folder: Path = Path(".")):
+    """Generate the exercises notebooks from the solutions notebooks in the given folder.
+
+    This process is done recursively and only on notebooks that contain # Hide directives.
+    """
+
+    for file in folder.rglob("*.ipynb"):
+        if "# Hide:" in file.read_text():
+            sync(file)
 
 
 @app.command()
