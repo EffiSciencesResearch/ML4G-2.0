@@ -11,7 +11,7 @@ python -m venv .env
 source .env/bin/activate
 
 # Install all the dependencies. If you don't have a GPU, start by installing pytorch without GPU support
-# pip3 install torch  --index-url https://download.pytorch.org/whl/cpu
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 
 # Setup the pre-commit hooks
