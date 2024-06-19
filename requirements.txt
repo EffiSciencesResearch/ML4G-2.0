@@ -1,7 +1,8 @@
 # If you don't have a GPU, you can run
-# pip3 install torch  --index-url https://download.pytorch.org/whl/cpu
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 # Before installing the requirement.txt
 torch
+torchvision
 
 anthropic
 black[jupyter]
@@ -20,7 +21,6 @@ pytest
 rich
 scikit-learn
 toml
-torchvision
 tqdm
 transformer_lens
 transformer_utils
