@@ -228,6 +228,12 @@ def sync(file: Path):
             return {label.strip().lower() for label in line.split(":")[1].split(",")}
         return set()
 
+    def add_line_count_if_needed(lines_hidden_in_a_row: int):
+        nonlocal new_lines  # Unnecessary, but for clarity
+        if lines_hidden_in_a_row:
+            unit = "line" if lines_hidden_in_a_row == 1 else "lines"
+            new_lines[-1] += f"  # TODO: ~{lines_hidden_in_a_row} {unit}\n"
+
     # Find labels
     labels = set()
     for cell in notebook["cells"]:
@@ -314,10 +320,8 @@ def sync(file: Path):
                         lines_hidden_in_a_row += 1
 
                     if not hide and not hides_defined_here:
-                        if lines_hidden_in_a_row:
-                            unit = "line" if lines_hidden_in_a_row == 1 else "lines"
-                            new_lines[-1] += f"  # TODO: ~{lines_hidden_in_a_row} {unit}\n"
-                            lines_hidden_in_a_row = 0
+                        add_line_count_if_needed(lines_hidden_in_a_row)
+                        lines_hidden_in_a_row = 0
                         new_lines.append(line)
                     else:
                         any_hidden = True
@@ -326,9 +330,7 @@ def sync(file: Path):
                         solution_lines.append(line)
 
                 # If we end by hidding, lines_hidden_in_a_row is still > 0
-                if lines_hidden_in_a_row:
-                    unit = "line" if lines_hidden_in_a_row == 1 else "lines"
-                    new_lines[-1] += f"  # TODO: ~{lines_hidden_in_a_row} {unit}\n"
+                add_line_count_if_needed(lines_hidden_in_a_row)
 
                 cell["source"] = new_lines
                 if not any_hidden:
