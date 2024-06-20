@@ -279,6 +279,7 @@ def sync(file: Path):
                 hide = False
                 hide_in_solution = False
                 any_hidden = False
+                lines_hidden_in_a_row = 0
                 new_lines = []
                 for line in cell["source"]:
                     hides_defined_here = parse_hide(line)
@@ -298,18 +299,36 @@ def sync(file: Path):
                     elif hides_defined_here:
                         hide = False
 
-                    # We started hidding stuff, and previous line was not "..."
-                    if hide and not last_hide and last_line.strip() != "...":
+                    # We started hidding stuff, and previous line did not start with "..."
+                    if hide and not last_hide and not last_line.strip().startswith("..."):
                         space = line.partition("#")[0]
-                        new_lines.append(space + "...\n")
+                        new_lines.append(space + "...")  # We add the number of lines hidden
+
+                    # Increment the counter of hiden lines, if non-empty/non-comment line and hidden
+                    if (
+                        hide
+                        and line.strip()
+                        and not hide_in_solution
+                        and not line.strip().startswith("#")
+                    ):
+                        lines_hidden_in_a_row += 1
 
                     if not hide and not hides_defined_here:
+                        if lines_hidden_in_a_row:
+                            unit = "line" if lines_hidden_in_a_row == 1 else "lines"
+                            new_lines[-1] += f"  # TODO: ~{lines_hidden_in_a_row} {unit}\n"
+                            lines_hidden_in_a_row = 0
                         new_lines.append(line)
                     else:
                         any_hidden = True
 
                     if not hide_in_solution and not hides_defined_here:
                         solution_lines.append(line)
+
+                # If we end by hidding, lines_hidden_in_a_row is still > 0
+                if lines_hidden_in_a_row:
+                    unit = "line" if lines_hidden_in_a_row == 1 else "lines"
+                    new_lines[-1] += f"  # TODO: ~{lines_hidden_in_a_row} {unit}\n"
 
                 cell["source"] = new_lines
                 if not any_hidden:
