@@ -234,6 +234,28 @@ def sync(file: Path):
             unit = "line" if lines_hidden_in_a_row == 1 else "lines"
             new_lines[-1] += f"  # TODO: ~{lines_hidden_in_a_row} {unit}\n"
 
+    def solution_lines_to_cell(solution_lines: list[str]) -> dict | None:
+        if not solution_lines:
+            return None
+
+        lines = [
+            "<details>\n",
+            "<summary>Show solution</summary>\n",
+            "\n",
+            "```python\n",
+            *solution_lines,
+            "\n",
+            "```\n",
+            "\n",
+            "</details>\n",
+            "\n",
+        ]
+        return {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": lines,
+        }
+
     # Find labels
     labels = set()
     for cell in notebook["cells"]:
@@ -256,31 +278,6 @@ def sync(file: Path):
         solution_lines = []
 
         for cell in new_notebook["cells"]:
-            if solution_lines:
-                new_lines = [
-                    "<details>\n",
-                    "<summary>Show solution</summary>\n",
-                    "\n",
-                    "```python\n",
-                    *solution_lines,
-                    "\n",
-                    "```\n",
-                    "\n",
-                    "</details>\n",
-                    "\n",
-                ]
-                if cell["cell_type"] == "markdown":
-                    cell["source"] = new_lines + cell["source"]
-                else:
-                    new_cells.append(
-                        {
-                            "cell_type": "markdown",
-                            "metadata": {},
-                            "source": new_lines,
-                        }
-                    )
-                solution_lines = []
-
             if cell["cell_type"] == "code":
                 hide = False
                 hide_in_solution = False
@@ -336,6 +333,10 @@ def sync(file: Path):
                 if not any_hidden:
                     solution_lines = []
             new_cells.append(cell)
+
+            if solution_lines:
+                new_cells.append(solution_lines_to_cell(solution_lines))
+                solution_lines = []
         new_notebook["cells"] = new_cells
 
         base_file.write_text(json.dumps(new_notebook, indent=2))
