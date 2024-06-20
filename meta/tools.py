@@ -7,7 +7,7 @@ import json
 import re
 from pathlib import Path
 from subprocess import check_output
-from typing import Iterator
+from typing import Annotated, Iterator
 
 import typer
 from rich import print as rprint
@@ -339,12 +339,18 @@ def sync(file: Path):
                 solution_lines = []
         new_notebook["cells"] = new_cells
 
-        base_file.write_text(json.dumps(new_notebook, indent=2) + "\n")
-        print(f"📝 {base_file} generated")
+        # Check if there were updates:
+        previous_content = base_file.read_text() if base_file.exists() else None
+        new_content = json.dumps(new_notebook, indent=2) + "\n"
+        if previous_content == new_content:
+            print(f"✅ {base_file} already up-to-date")
+        else:
+            base_file.write_text(new_content)
+            print(f"📝 {base_file} generated")
 
 
 @app.command()
-def sync_all(folder: Path = Path(".")):
+def sync_all(folder: Annotated[Path, typer.Argument()] = Path(".")):
     """Generate the exercises notebooks from the solutions notebooks in the given folder.
 
     This process is done recursively and only on notebooks that contain # Hide directives.
