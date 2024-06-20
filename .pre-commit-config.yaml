@@ -14,6 +14,7 @@ repos:
     -   id: clean-jupyer
         name: remove jupyer outputs and metadata
         files: \.ipynb$
+        exclude: ^tests/
         language: system
         entry: python
         args:
@@ -34,6 +35,7 @@ repos:
     -   id: add-badges
         name: update 'open in colab' badges
         files: \.ipynb$
+        exclude: ^tests/
         language: system
         entry: python
         args:

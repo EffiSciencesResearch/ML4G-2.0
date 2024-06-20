@@ -339,7 +339,7 @@ def sync(file: Path):
                 solution_lines = []
         new_notebook["cells"] = new_cells
 
-        base_file.write_text(json.dumps(new_notebook, indent=2))
+        base_file.write_text(json.dumps(new_notebook, indent=2) + "\n")
         print(f"📝 {base_file} generated")
 
 
