@@ -4,17 +4,14 @@ from copy import deepcopy
 from dataclasses import dataclass
 import difflib
 import json
-import openai
-import os
-import sys
 import re
 from pathlib import Path
 from subprocess import check_output
 from typing import Iterator
 
-import rich.color
 import typer
 from rich import print as rprint
+
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 
@@ -403,6 +400,8 @@ def list_of_workshops_readme():
 
 
 def fix_typos_lines(lines: list[str]):
+    import openai
+
     if not lines:
         return []
 
