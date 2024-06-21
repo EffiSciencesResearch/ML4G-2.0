@@ -11,6 +11,7 @@ from typing import Annotated, Iterator
 
 import typer
 from rich import print as rprint
+import black
 
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -18,6 +19,13 @@ app = typer.Typer(no_args_is_help=True, add_completion=False)
 ROOT = Path(__file__).resolve().parent.parent
 
 RE_URL = re.compile(r"(https?://[^\s)\"]+)([\s).,\\\n]|$)")
+BAD_URL_PATTERNS = ["/ML4G/"]
+
+BADGE_TEMPLATE = """<a href="https://colab.research.google.com/github/EffiSciencesResearch/{repo_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
+RE_BADGE = re.compile(BADGE_TEMPLATE.format(repo_path=r'[^"]+'), re.MULTILINE)
+RE_BADGE = re.compile(r'<a href=\\"([^"]+)\\"[^>]*>.*?colab-badge\.svg.*?</a>', re.MULTILINE)
+
+type Notebook = dict
 
 
 def gather_ipynbs(files: list[Path]) -> list[Path]:
@@ -38,6 +46,21 @@ def gather_ipynbs(files: list[Path]) -> list[Path]:
             raise FileNotFoundError(file)
 
     return ipynbs
+
+
+def notebook_to_str(notebook: Notebook) -> str:
+    """Convert the notebook to a string, suitable for saving to disc."""
+    return json.dumps(notebook, indent=4) + "\n"
+
+
+def save_notebook(file: Path, notebook: Notebook):
+    """Save the notebook to the given file."""
+    file.write_text(notebook_to_str(notebook))
+
+
+def load_notebook(file: Path) -> Notebook:
+    """Load the notebook from the given file."""
+    return json.loads(file.read_text())
 
 
 @dataclass
@@ -76,20 +99,6 @@ def get_all_links(verbose: bool = False) -> Iterator[Link]:
                 yield Link(file, line_no, url)
 
 
-@app.command()
-def show_links(with_file: bool = False, verbose: bool = False):
-    """Show all the links in the git repository."""
-
-    for link in get_all_links(verbose):
-        if with_file:
-            print(link)
-        else:
-            print(link.url)
-
-
-BAD_PATTERNS = ["/ML4G/"]
-
-
 def check_link(link: Link, curl: bool = False) -> str | None:
     """Check if the link is broken."""
 
@@ -105,7 +114,7 @@ def check_link(link: Link, curl: bool = False) -> str | None:
         if not path.exists():
             return f"Colab link to non-existing file: {path}"
 
-    for pattern in BAD_PATTERNS:
+    for pattern in BAD_URL_PATTERNS:
         if pattern in url:
             return f"Bad pattern: {pattern}"
 
@@ -118,68 +127,18 @@ def check_link(link: Link, curl: bool = False) -> str | None:
     return None
 
 
-@app.command()
-def check_links(curl: bool = False):
-    """Check for broken links."""
-
-    for link in get_all_links():
-        error = check_link(link, curl)
-        if error is not None:
-            print(f"🔴 {link} - {error}")
-
-
-BADGE_TEMPLATE = """<a href="https://colab.research.google.com/github/EffiSciencesResearch/{repo_path}" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>"""
-RE_BADGE = re.compile(BADGE_TEMPLATE.format(repo_path=r'[^"]+'), re.MULTILINE)
-RE_BADGE = re.compile(r'<a href=\\"([^"]+)\\"[^>]*>.*?colab-badge\.svg.*?</a>', re.MULTILINE)
-
-
-@app.command()
-def badge(files: list[Path]):
-    """Add the "Open in Colab" badge to every of input notebook.
-
-    Scans directories recursively. If a badge is already present, it will be updated to the current file path.
-    """
-
-    for file in files[:]:
-        if file.is_dir():
-            files.remove(file)
-            files.extend(file.rglob("*.ipynb"))
-
-    for file in files:
-        if not file.exists():
-            print(f"🙈 {file} does not exist")
-            continue
-        elif file.suffix != ".ipynb":
-            print(f"🚷 {file} is not a notebook")
-            continue
-
-        initial_content = file.read_text()
-        content = add_badge(file, initial_content)
-
-        bagdes_count = content.count("colab-badge.svg")
-        if bagdes_count > 1:
-            details = f" {bagdes_count} badges found in this file. 🤔"
-        else:
-            details = ""
-
-        if content == initial_content:
-            print(f"✅ {file} already has a badge.{details}")
-        else:
-            file.write_text(content)
-            print(f"🖊  {file} now has a badge!{details}")
-
-
-def add_badge(file: Path, content: str) -> str:
+def add_badge(file: Path, notebook: Notebook) -> Notebook:
+    """Return the notebook with the badge added in the first markdown cell."""
     try:
         relative_path = file.resolve().relative_to(ROOT)
     except ValueError:
         # No need to add badges for things outside of the repo.
         # Those are test notebooks.
-        return content
+        return notebook
 
     if relative_path.parts[0] != "workshops":
         # No badge if not a workshop.
-        return content
+        return notebook
 
     badge_content = BADGE_TEMPLATE.format(
         repo_path=f"ML4G-2.0/blob/master/{relative_path.as_posix()}"
@@ -187,22 +146,21 @@ def add_badge(file: Path, content: str) -> str:
     badge_content_escaped = badge_content.replace('"', '\\"')
 
     # Sync the badge and file name
+    content = notebook_to_str(notebook)
     content = RE_BADGE.sub(badge_content_escaped, content)
 
     # Add the badge in the first cell if it is not present
     if badge_content_escaped not in content:
-        parsed = json.loads(content)
-        for cell in parsed["cells"]:
+        notebook = json.loads(content)
+        for cell in notebook["cells"]:
             if cell["cell_type"] == "markdown":
                 cell["source"].insert(0, badge_content + "\n")
                 break
-        content = json.dumps(parsed, indent=2)
 
-    return content
+    return notebook
 
 
-@app.command()
-def sync(file: Path):
+def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     """Generate the exercises notebook from the solutions notebook.
 
     All lines after annotations such as "Hide: all" or "Hide: hard" are removed.
@@ -233,9 +191,7 @@ def sync(file: Path):
     And the solution after this cell will contain everything but the "..." line.
     """
 
-    assert file.exists(), f"{file} does not exist"
-
-    notebook = json.loads(file.read_text())
+    exercise_notebooks = {}
 
     def parse_hide(line: str) -> set[str]:
         if line.strip().startswith("# Hide:"):
@@ -281,6 +237,9 @@ def sync(file: Path):
             for line in cell["source"]:
                 labels = labels.union(parse_hide(line))
 
+    if not labels:
+        return {}
+
     labels.discard("none")
     labels.discard("solution")
     labels.discard("all")
@@ -288,8 +247,6 @@ def sync(file: Path):
 
     # Generate notebooks
     for label in labels:
-        base_file = file.with_stem(file.stem + f"_{label}")
-
         new_notebook = deepcopy(notebook)
         new_cells = []
 
@@ -355,29 +312,142 @@ def sync(file: Path):
             if solution_lines:
                 new_cells.append(solution_lines_to_cell(solution_lines))
                 solution_lines = []
-        new_notebook["cells"] = new_cells
 
-        # Check if there were updates:
-        previous_content = base_file.read_text() if base_file.exists() else None
-        new_content = json.dumps(new_notebook, indent=2) + "\n"
-        new_content = add_badge(base_file, new_content)
-        if previous_content == new_content:
-            print(f"✅ {base_file} already up-to-date")
-        else:
-            base_file.write_text(new_content)
-            print(f"📝 {base_file} generated")
+        new_notebook["cells"] = new_cells
+        exercise_notebooks[label] = new_notebook
+
+    return exercise_notebooks
+
+
+def clean_notebook(notebook: Notebook) -> Notebook:
+    notebook = deepcopy(notebook)
+
+    notebook["metadata"] = dict(
+        language_info=dict(
+            name="python",
+            pygments_lexer="ipython3",
+        )
+    )
+
+    for cell in notebook["cells"]:
+        if "outputs" in cell:
+            cell["outputs"] = []
+        if "execution_count" in cell:
+            cell["execution_count"] = None
+        if "metadata" in cell:
+            cell["metadata"] = {}
+
+    return notebook
+
+
+def fmt_notebook(notebook: Notebook) -> Notebook:
+    try:
+        return json.loads(
+            black.format_ipynb_string(
+                notebook_to_str(notebook),
+                fast=False,
+                mode=black.Mode(line_length=100, is_ipynb=True),
+            )
+        )
+    except black.NothingChanged:
+        return notebook
+
+
+# ------------------------------
+# CLI commands
+# ------------------------------
 
 
 @app.command()
-def sync_all(folder: Annotated[Path, typer.Argument()] = Path(".")):
-    """Generate the exercises notebooks from the solutions notebooks in the given folder.
+def neat(files: list[Path], clean: bool = True, badge: bool = True, fmt: bool = True):
+    for file in gather_ipynbs(files):
+        initial = load_notebook(file)
+        notebook = initial
 
-    This process is done recursively and only on notebooks that contain # Hide directives.
+        if clean:
+            notebook = clean_notebook(initial)
+            if notebook != initial:
+                print(f"🧹 {file} cleaned")
+
+        if badge:
+            with_badge = add_badge(file, notebook)
+            if with_badge != notebook:
+                notebook = with_badge
+                print(f"🏷️ {file} now has a badge!")
+
+        if fmt:
+            formated = fmt_notebook(notebook)
+            if formated != notebook:
+                notebook = formated
+                print(f"🖊️  {file} was reformated")
+
+        if notebook == initial:
+            print(f"✅ {file} already neat")
+        else:
+            file.write_text(notebook_to_str(notebook))
+
+
+@app.command()
+def show_links(with_file: bool = False, verbose: bool = False):
+    """Show all the links in the git repository."""
+
+    for link in get_all_links(verbose):
+        if with_file:
+            print(link)
+        else:
+            print(link.url)
+
+
+@app.command()
+def check_links(curl: bool = False):
+    """Check for broken links."""
+
+    for link in get_all_links():
+        error = check_link(link, curl)
+        if error is not None:
+            print(f"🔴 {link} - {error}")
+
+
+@app.command()
+def badge(files: list[Path]):
+    """Add the "Open in Colab" badge to every of input notebook.
+
+    Scans directories recursively. If a badge is already present, it will be updated to the current file path.
     """
 
-    for file in folder.rglob("*.ipynb"):
-        if "# Hide:" in file.read_text():
-            sync(file)
+    for file in gather_ipynbs(files):
+        notebook = json.loads(file.read_text())
+        with_badge = add_badge(file, notebook)
+
+        bagdes_count = notebook_to_str(with_badge).count("colab-badge.svg")
+        if bagdes_count > 1:
+            details = f" {bagdes_count} badges found in this file. 🤔"
+        else:
+            details = ""
+
+        if notebook == with_badge:
+            print(f"✅ {file} already has a badge.{details}")
+        else:
+            file.write_text(notebook_to_str(with_badge))
+            print(f"🖊  {file} now has a badge!{details}")
+
+
+@app.command(help=generate_exercise_notebooks.__doc__)
+def sync(files: list[Path]):
+    for file in gather_ipynbs(files):
+        notebook = load_notebook(file)
+        new_notebooks = generate_exercise_notebooks(notebook)
+
+        for label, new_notebook in new_notebooks.items():
+            out_path = file.with_stem(file.stem + f"_{label}")
+            new_notebook = fmt_notebook(clean_notebook(add_badge(file, new_notebook)))
+
+            # Check if there were updates:
+            if new_notebook == json.loads(out_path.read_text()):
+                print(f"✅ {out_path} already up-to-date")
+            else:
+                out_path.write_text(notebook_to_str(new_notebook))
+                print(f"📝 {out_path} generated")
 
 
 @app.command()
@@ -386,23 +456,8 @@ def clean(files: list[Path]):
 
     for file in gather_ipynbs(files):
         notebook = json.loads(file.read_text())
-
-        notebook["metadata"] = dict(
-            language_info=dict(
-                name="python",
-                pygments_lexer="ipython3",
-            )
-        )
-
-        for cell in notebook["cells"]:
-            if "outputs" in cell:
-                cell["outputs"] = []
-            if "execution_count" in cell:
-                cell["execution_count"] = None
-            if "metadata" in cell:
-                cell["metadata"] = {}
-
-        file.write_text(json.dumps(notebook, indent=2) + "\n")
+        notebook = clean_notebook(notebook)
+        file.write_text(notebook_to_str(notebook))
 
 
 @app.command()
@@ -619,7 +674,7 @@ def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
 
         cell["source"] = new.splitlines(keepends=True)
 
-    file.write_text(json.dumps(notebook, indent=2) + "\n")
+    file.write_text(json.dumps(notebook, indent=4) + "\n")
     print("✅ Saved!")
 
 

@@ -16,5 +16,7 @@ def test_sync(tmpdir):
 
     sync(input_notebook)
 
-    assert output_normal.read_text() == expected_normal.read_text()
-    assert output_hard.read_text() == expected_hard.read_text()
+    for output, expected in [(output_normal, expected_normal), (output_hard, expected_hard)]:
+        for line1, line2 in zip(output.read_text().splitlines(), expected.read_text().splitlines()):
+            assert line1 == line2
+        assert len(output.read_text()) == len(expected.read_text())

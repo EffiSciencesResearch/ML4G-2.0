@@ -1,25 +1,38 @@
 repos:
 
--   repo: https://github.com/psf/black
-    rev: 24.2.0
-    hooks:
-    -   id: black-jupyter
-        name: format jupyter notebooks with black
-        args:
-        - --line-length
-        - "100"
-
 -   repo: local
     hooks:
-    -   id: clean-jupyer
-        name: remove jupyer outputs and metadata
+    -   id: generate-notebooks
+        name: generate exercise notebooks
         files: \.ipynb$
         exclude: ^tests/
         language: system
         entry: python
         args:
         - meta/tools.py
-        - clean
+        - sync
+
+
+# -   repo: https://github.com/psf/black
+#     rev: 24.2.0
+#     hooks:
+#     -   id: black-jupyter
+#         name: format jupyter notebooks with black
+#         args:
+#         - --line-length
+#         - "100"
+
+-   repo: local
+    hooks:
+    -   id: neat-notebooks
+        name: remove jupyer outputs, metadata, fmt and add badge
+        files: \.ipynb$
+        exclude: ^tests/
+        language: system
+        entry: python
+        args:
+        - meta/tools.py
+        - neat
 
     -   id: update-readme
         name: sync TOC in README.md
@@ -30,17 +43,6 @@ repos:
         args:
         - meta/tools.py
         - list-of-workshops-readme
-
-
-    -   id: add-badges
-        name: update 'open in colab' badges
-        files: \.ipynb$
-        exclude: ^tests/
-        language: system
-        entry: python
-        args:
-        - meta/tools.py
-        - badge
 
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
