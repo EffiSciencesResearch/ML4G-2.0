@@ -153,26 +153,8 @@ def badge(files: list[Path]):
             print(f"🚷 {file} is not a notebook")
             continue
 
-        content = file.read_text()
-        initial_content = content
-
-        relative_path = file.resolve().relative_to(ROOT)
-        badge_content = BADGE_TEMPLATE.format(
-            repo_path=f"ML4G-2.0/blob/master/{relative_path.as_posix()}"
-        )
-        badge_content_escaped = badge_content.replace('"', '\\"')
-
-        # Sync the badge and file name
-        content = RE_BADGE.sub(badge_content_escaped, content)
-
-        # Add the badge in the first cell if it is not present
-        if badge_content_escaped not in content:
-            parsed = json.loads(content)
-            for cell in parsed["cells"]:
-                if cell["cell_type"] == "markdown":
-                    cell["source"].insert(0, badge_content + "\n")
-                    break
-            content = json.dumps(parsed, indent=2)
+        initial_content = file.read_text()
+        content = add_badge(file, initial_content)
 
         bagdes_count = content.count("colab-badge.svg")
         if bagdes_count > 1:
@@ -185,6 +167,38 @@ def badge(files: list[Path]):
         else:
             file.write_text(content)
             print(f"🖊  {file} now has a badge!{details}")
+
+
+def add_badge(file: Path, content: str) -> str:
+    try:
+        relative_path = file.resolve().relative_to(ROOT)
+    except ValueError:
+        # No need to add badges for things outside of the repo.
+        # Those are test notebooks.
+        return content
+
+    if relative_path.parts[0] != "workshops":
+        # No badge if not a workshop.
+        return content
+
+    badge_content = BADGE_TEMPLATE.format(
+        repo_path=f"ML4G-2.0/blob/master/{relative_path.as_posix()}"
+    )
+    badge_content_escaped = badge_content.replace('"', '\\"')
+
+    # Sync the badge and file name
+    content = RE_BADGE.sub(badge_content_escaped, content)
+
+    # Add the badge in the first cell if it is not present
+    if badge_content_escaped not in content:
+        parsed = json.loads(content)
+        for cell in parsed["cells"]:
+            if cell["cell_type"] == "markdown":
+                cell["source"].insert(0, badge_content + "\n")
+                break
+        content = json.dumps(parsed, indent=2)
+
+    return content
 
 
 @app.command()
@@ -228,11 +242,15 @@ def sync(file: Path):
             return {label.strip().lower() for label in line.split(":")[1].split(",")}
         return set()
 
-    def add_line_count_if_needed(lines_hidden_in_a_row: int):
+    def add_line_count_if_needed(lines_hidden_in_a_row: list[str]):
         nonlocal new_lines  # Unnecessary, but for clarity
         if lines_hidden_in_a_row:
-            unit = "line" if lines_hidden_in_a_row == 1 else "lines"
-            new_lines[-1] += f"  # TODO: ~{lines_hidden_in_a_row} {unit}\n"
+            # We compute the number of words hidden
+            nb_words = sum(
+                len(re.findall(r"[a-zA-Z0-9_]+", line)) for line in lines_hidden_in_a_row
+            )
+            unit = "word" if lines_hidden_in_a_row == 1 else "words"
+            new_lines[-1] += f"  # TODO: ~{nb_words} {unit}\n"
 
     def solution_lines_to_cell(solution_lines: list[str]) -> dict | None:
         if not solution_lines:
@@ -282,7 +300,7 @@ def sync(file: Path):
                 hide = False
                 hide_in_solution = False
                 any_hidden = False
-                lines_hidden_in_a_row = 0
+                lines_hidden_in_a_row = []
                 new_lines = []
                 for line in cell["source"]:
                     hides_defined_here = parse_hide(line)
@@ -314,11 +332,11 @@ def sync(file: Path):
                         and not hide_in_solution
                         and not line.strip().startswith("#")
                     ):
-                        lines_hidden_in_a_row += 1
+                        lines_hidden_in_a_row.append(line)
 
                     if not hide and not hides_defined_here:
                         add_line_count_if_needed(lines_hidden_in_a_row)
-                        lines_hidden_in_a_row = 0
+                        lines_hidden_in_a_row = []
                         new_lines.append(line)
                     else:
                         any_hidden = True
@@ -342,6 +360,7 @@ def sync(file: Path):
         # Check if there were updates:
         previous_content = base_file.read_text() if base_file.exists() else None
         new_content = json.dumps(new_notebook, indent=2) + "\n"
+        new_content = add_badge(base_file, new_content)
         if previous_content == new_content:
             print(f"✅ {base_file} already up-to-date")
         else:
