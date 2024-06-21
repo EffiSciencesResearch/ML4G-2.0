@@ -1,16 +1,11 @@
-**/.data/**
-**/.checkpoints/**
 build/
 crash-*
-**/__pycache__/
-mlab.egg-info/
+__pycache__/
 scratch/
 .ipynb_checkpoints/
 *.pth
 *.zip
 .env
-<<<<<<< HEAD
 .venv
-=======
 .envrc
->>>>>>> f599c67b11070403fc86e46f1f3978e1956ac61f
+workshops/gradcam/gradCam/

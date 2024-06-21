@@ -443,7 +443,7 @@ def sync(files: list[Path]):
             new_notebook = fmt_notebook(clean_notebook(add_badge(out_path, new_notebook)))
 
             # Check if there were updates:
-            if new_notebook == json.loads(out_path.read_text()):
+            if out_path.exists() and new_notebook == json.loads(out_path.read_text()):
                 print(f"✅ {out_path} already up-to-date")
             else:
                 out_path.write_text(notebook_to_str(new_notebook))

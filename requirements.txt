@@ -28,6 +28,7 @@ transformers
 typeguard
 typer
 circuitsvis
+opencv-python
 
 # accelerate
 # black
