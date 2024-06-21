@@ -148,10 +148,10 @@ def add_badge(file: Path, notebook: Notebook) -> Notebook:
     # Sync the badge and file name
     content = notebook_to_str(notebook)
     content = RE_BADGE.sub(badge_content_escaped, content)
+    notebook = json.loads(content)
 
     # Add the badge in the first cell if it is not present
     if badge_content_escaped not in content:
-        notebook = json.loads(content)
         for cell in notebook["cells"]:
             if cell["cell_type"] == "markdown":
                 cell["source"].insert(0, badge_content + "\n")
@@ -345,7 +345,7 @@ def fmt_notebook(notebook: Notebook) -> Notebook:
         return json.loads(
             black.format_ipynb_string(
                 notebook_to_str(notebook),
-                fast=False,
+                fast=True,
                 mode=black.Mode(line_length=100, is_ipynb=True),
             )
         )
@@ -382,7 +382,7 @@ def neat(files: list[Path], clean: bool = True, badge: bool = True, fmt: bool = 
                 print(f"🖊️  {file} was reformated")
 
         if notebook == initial:
-            print(f"✅ {file} already neat")
+            print(f"🌟 {file} already neat")
         else:
             file.write_text(notebook_to_str(notebook))
 
@@ -440,7 +440,7 @@ def sync(files: list[Path]):
 
         for label, new_notebook in new_notebooks.items():
             out_path = file.with_stem(file.stem + f"_{label}")
-            new_notebook = fmt_notebook(clean_notebook(add_badge(file, new_notebook)))
+            new_notebook = fmt_notebook(clean_notebook(add_badge(out_path, new_notebook)))
 
             # Check if there were updates:
             if new_notebook == json.loads(out_path.read_text()):
