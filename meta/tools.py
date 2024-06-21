@@ -50,7 +50,7 @@ def gather_ipynbs(files: list[Path]) -> list[Path]:
 
 def notebook_to_str(notebook: Notebook) -> str:
     """Convert the notebook to a string, suitable for saving to disc."""
-    return json.dumps(notebook, indent=4) + "\n"
+    return json.dumps(notebook, indent=4, ensure_ascii=False) + "\n"
 
 
 def save_notebook(file: Path, notebook: Notebook):
