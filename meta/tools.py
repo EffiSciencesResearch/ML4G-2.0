@@ -699,6 +699,12 @@ def make_pairing(names, n_orgas, rounds):
         participants_left = set(participants)
         orgas_left = set(orgas)
 
+        # if i in (2, 3, 4):
+        #     orgas_left -= {"Charbel"}
+        #     participants_left -= {"-"}
+        #     pairs["Charbel"] = "-"
+        #     pairs["-"] = "Charbel"
+
         while orgas_left and participants_left:
             orga = orgas_left.pop()
             match = min(participants_left - people_seen[orga], key=lambda name: orgas_seen[name])
@@ -723,7 +729,7 @@ def make_pairing(names, n_orgas, rounds):
 
 @app.command()
 def one_on_ones(names: Annotated[str, typer.Argument(help="Space or newline separated list of participants.")],
-                           n_orgas: int, rounds: int, tries: int = 1000):
+                           n_orgas: int, rounds: int, tries: int = 10000):
     """Generate the one-on-ones for the given names.
 
     The names are shuffled and paired in a round-robin fashion,
