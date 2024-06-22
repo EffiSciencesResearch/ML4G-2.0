@@ -7,7 +7,9 @@ import json
 import re
 from pathlib import Path
 from subprocess import check_output
+import sys
 from typing import Annotated, Iterator
+import random
 
 import typer
 from rich import print as rprint
@@ -676,6 +678,87 @@ def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
 
     file.write_text(json.dumps(notebook, indent=4) + "\n")
     print("✅ Saved!")
+
+
+def make_pairing(names, n_orgas, rounds):
+    orgas = names[:n_orgas]
+    participants = names[n_orgas:]
+    orgas_seen = {name: 0 for name in participants}
+    people_seen = {name: set() for name in names}
+    for orga in orgas:
+        people_seen[orga] = {"-"}
+    people_seen["-"] = set(orgas)
+    orgas_seen["-"] = 10000
+
+    all_pairings = []
+
+    for i in range(rounds):
+        pairs = {}
+        random.shuffle(participants)
+        random.shuffle(orgas)
+        participants_left = set(participants)
+        orgas_left = set(orgas)
+
+        while orgas_left and participants_left:
+            orga = orgas_left.pop()
+            match = min(participants_left - people_seen[orga], key=lambda name: orgas_seen[name])
+            participants_left.remove(match)
+            orgas_seen[match] += 1
+            pairs[orga] = match
+            pairs[match] = orga
+            people_seen[orga].add(match)
+            people_seen[match].add(orga)
+
+        while participants_left:
+            name = participants_left.pop()
+            match = (participants_left - people_seen[name]).pop()
+            participants_left.remove(match)
+            pairs[name] = match
+            pairs[match] = name
+            people_seen[name].add(match)
+            people_seen[match].add(name)
+
+        all_pairings.append(sorted(pairs.items()))
+    return all_pairings
+
+@app.command()
+def one_on_ones(names: Annotated[str, typer.Argument(help="Space or newline separated list of participants.")],
+                           n_orgas: int, rounds: int, tries: int = 1000):
+    """Generate the one-on-ones for the given names.
+
+    The names are shuffled and paired in a round-robin fashion,
+    but the first n_orgas names are always the organizers, which don't
+    have 1-1 between them, and participants are paired in priority with them,
+    if they have had less 1-1s with orgas than the others.
+    """
+
+    names = names.strip()
+    if "\n" in names:
+        name_list = names.splitlines()
+    else:
+        name_list = names.split()
+
+    if len(name_list) % 2:
+        name_list.append("-")
+
+    for i in range(tries):
+        try:
+            all_pairings = make_pairing(name_list, n_orgas, rounds)
+            print(f"Found a solution after {i} tries.", file=sys.stderr)
+            break
+        except KeyError:
+            continue
+    else:
+        print(f"Failed to find a solution after {tries} tries. Retry?", file=sys.stderr)
+        exit(1)
+
+    for row in zip(*all_pairings):
+        print(row[0][0], end="\t")
+        print("\t".join(f"{match}" for name, match in row))
+
+
+
+
 
 
 if __name__ == "__main__":
