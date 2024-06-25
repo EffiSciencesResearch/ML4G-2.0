@@ -30,6 +30,11 @@ typer
 circuitsvis
 opencv-python
 
+google-api-python-client 
+google-auth 
+google-auth-oauthlib 
+google-auth-httplib2
+
 # accelerate
 # black
 # click
