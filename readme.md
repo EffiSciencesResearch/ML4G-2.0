@@ -12,6 +12,7 @@ However there are a lot more workshops on strategy, goverance and conceptual AI 
 ### Links to google colab versions of the notebooks
 <!-- start workshops -->
 - agents: [agents](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/agents/agents.ipynb), [agents hard](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/agents/agents_hard.ipynb), [agents normal](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/agents/agents_normal.ipynb)
+- evals: [evals](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/evals/evals.ipynb)
 - fsgm patch attack: [fsgm patch attack](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/fsgm_patch_attack/fsgm_patch_attack.ipynb)
 - gradcam: [gradcam](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/gradcam/gradcam.ipynb), [gradcam hard](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/gradcam/gradcam_hard.ipynb), [gradcam normal](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/gradcam/gradcam_normal.ipynb)
 - hyperparameters: [hyperparameters](https://colab.research.google.com/github/EffiSciencesResearch/ML4G-2.0/blob/master/workshops/hyperparameters/hyperparameters.ipynb)
