@@ -7,6 +7,7 @@ torchvision
 anthropic
 black[jupyter]
 einops
+inspect-ai==0.3.25
 ipykernel
 ipywidgets
 jaxtyping
