@@ -1,4 +1,5 @@
 build/
+logs/
 crash-*
 __pycache__/
 scratch/
@@ -9,3 +10,4 @@ scratch/
 .venv
 .envrc
 workshops/gradcam/gradCam/
+service_account_token.json

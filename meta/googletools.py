@@ -1,106 +1,135 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import csv
-from pathlib import Path
 from typing import Annotated
+import yaml
 import typer
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
+from pathlib import Path
 
-app = typer.Typer()
+from google_utils import extract_id_from_url, SimpleGoogleAPI
+from InquirerPy import inquirer
 
-# Function to replace [NAME] in the document
-def replace_name_in_document(docs_service, document_id, name):
-    requests = [
-        {
-            'replaceAllText': {
-                'containsText': {
-                    'text': '[NAME]',
-                    'matchCase': True,
-                },
-                'replaceText': name,
-            }
-        }
-    ]
-    result = docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
-    return result
 
-# Function to copy the document
-def copy_document(drive_service, file_id, name, folder_id):
+
+app = typer.Typer(add_completion=False, no_args_is_help=True)
+
+DEFAULT_SERVICE_ACCOUNT_FILE = Path(__file__).parent / "service_account_token.json"
+CONFIG_FILE = Path(__file__).parent / 'config.yaml'
+API: SimpleGoogleAPI = None
+
+@app.callback()
+def callback(
+    service_account_file: str = typer.Option(DEFAULT_SERVICE_ACCOUNT_FILE, help="Path to the service account file")
+):
+    global API
+    API = SimpleGoogleAPI(service_account_file)
+
+
+def load_config():
+    """Load configuration from a YAML file."""
+    try:
+        with open(CONFIG_FILE, 'r') as file:
+            return yaml.safe_load(file)
+    except Exception:
+        return {}
+
+def save_config(config):
+    """Save configuration to a YAML file."""
+    with open(CONFIG_FILE, 'w') as file:
+        yaml.safe_dump(config, file)
+
+@app.command(no_args_is_help=True)
+def copy_to_camp_folder(
+    # fmt: off
+    url: str,
+    folder_url: Annotated[str, typer.Option(help="Google Drive folder URL to copy the presentation to")] = None,
+    camp_prefix: Annotated[str, typer.Option(help="Prefix to add to the copied presentation name")] = None
+    # fmt: on
+):
     """
-    Copies a Google Docs template, replacing [NAME] in the filename with the actual name.
+    Copy a Google Slides/Docs/... to a specified Google Drive folder with a new name prefix.
 
-    Args:
-        drive_service: The Google Drive service instance.
-        file_id: The ID of the Google Docs template to copy.
-        name: The name to replace [NAME] with in the filename.
-        folder_id: The ID of the Google Drive folder where the copy will be saved.
+    This is meant to be used during each camp to make the presentations public easily.
 
-    Returns:
-        The ID of the copied document.
+    Configuration File (config.yaml):
+    - The tool maintains a configuration file named 'config.yaml' in the same directory as the script.
+    - This file stores the last used folder URL and prefix, to reuse things during the camp, without needing to specify these parameters again.  
+
+    Service Account File:
+    - A service account file is required to authenticate with the Google Drive API. It is a JSON file.
+    - The service account must have access to both the source presentation (read) and the destination
+        folder (write) in Google Drive.
+    - Ask Diego for the service account file.
     """
-    # Get the original file metadata
-    original_file = drive_service.files().get(fileId=file_id, fields='name').execute()
-    original_name = original_file['name']
 
-    # Replace [NAME] in the original name with the actual name
-    new_name = original_name.replace('[NAME]', name)
+    # Load configuration
+    config = load_config()
 
-    # Prepare the request body for copying the file
-    body = {
-        'name': new_name,
-        'parents': [folder_id]
-    }
+    # Use the last folder URL from the config if not provided
+    if not folder_url:
+        folder_url = config.get('last_folder_url', None)
+        if not folder_url:
+            raise ValueError("Folder URL must be provided either as an argument or in the config file.")
+    if not camp_prefix:
+        camp_prefix = config.get('camp_prefix', '')
 
-    # Copy the file
-    copied_file = drive_service.files().copy(fileId=file_id, body=body).execute()
-    return copied_file['id']
+    # Extract IDs from URLs
+    presentation_id = extract_id_from_url(url)
+    folder_id = extract_id_from_url(folder_url)
 
-# Function to share the document
-def share_document(drive_service, file_id, email):
-    user_permission = {
-        'type': 'user',
-        'role': 'writer',
-        'emailAddress': email
-    }
-    drive_service.permissions().create(
-        fileId=file_id,
-        body=user_permission,
-        fields='id'
-    ).execute()
+    # Copy the presentation directly into the specified folder
+    name = API.get_file_name(presentation_id)
+    new_name = camp_prefix + name
 
-# Main function to process the document for each (name, email) pair
-def process_document(template_id, folder_id, service_account_file, name_email_list):
-    SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/documents']
-    credentials = service_account.Credentials.from_service_account_file(service_account_file, scopes=SCOPES)
-    drive_service = build('drive', 'v3', credentials=credentials)
-    docs_service = build('docs', 'v1', credentials=credentials)
+    if not inquirer.confirm(f"Copy with name '{new_name}'?", default=True):
+        exit(1)
 
-    for name, email in name_email_list:
-        copied_doc_id = copy_document(drive_service, template_id, name, folder_id)
-        replace_name_in_document(docs_service, copied_doc_id, name)
-        share_document(drive_service, copied_doc_id, email)
-        print(f'Document for {name} shared with {email}')
+    new_id = API.copy_file(presentation_id, folder_id, new_name)
 
-@app.command()
-def main(
+    # Print the URLs of the folder and the new presentation
+    print(f"Folder URL: {folder_url}")
+    new_presentation_url = url.replace(presentation_id, new_id)
+    print(f"New Presentation URL: {new_presentation_url}")
+
+    # Update the configuration with the last used folder URL
+    config['last_folder_url'] = folder_url
+    config['camp_prefix'] = camp_prefix
+    save_config(config)
+
+
+@app.command(no_args_is_help=True)
+def duplicate_career_docs(
+    # fmt: off
     names_and_email_file: Annotated[Path, typer.Argument(help="Path to the CSV file containing names and emails without header")],
     template_id: Annotated[str, typer.Argument(help="Google Docs template ID")],
     folder_id: Annotated[str, typer.Argument(help="Google Drive folder ID where copies will be saved")],
-    service_account_file: Annotated[Path, typer.Argument(help="Path to the service account JSON key file")]
+    # fmt: on
 ):
     """
     Create personalized copies of a Google Docs template and share them via email.
 
-    This script reads a CSV file containing names and emails, creates a copy of the
-    Google Docs template for each name, replaces [NAME] in the document and filename,
-    and shares the document with the corresponding email.
+    This script reads a CSV file containing two columns with header, "name" and "email",
+    creates a copy of the Google Docs template for each name,
+    replaces [NAME] in the document and filename, and shares the document with
+    the corresponding email.
     """
-    name_email_list = []
-    with open(names_and_email_file, newline='') as csvfile:
-        reader = csv.reader(csvfile)
+
+    email_to_name = {}
+    with open(names_and_email_file) as csvfile:
+        reader = csv.DictReader(csvfile)
         for row in reader:
-            name_email_list.append((row[0], row[1]))
+            email_to_name[row[1]] = row[0]
 
-    process_document(template_id, folder_id, service_account_file, name_email_list)
+    doc_name = API.get_file_name(template_id)
+    for email, name in email_to_name.items():
+        print(f'Processing document for {name} ({email})', end='... ')
+        new_name = doc_name.replace('[NAME]', name)
+        copied_doc_id = API.copy_file(template_id, folder_id, new_name)
+        API.replace_in_document(copied_doc_id, '[NAME]', name)
+        API.share_document(copied_doc_id, email)
+        print('✅')
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     app()
