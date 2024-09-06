@@ -11,6 +11,7 @@ import sys
 from typing import Annotated, Iterator
 import random
 
+from pydantic import BaseModel
 import typer
 from rich import print as rprint
 import black
@@ -680,62 +681,28 @@ def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
     print("✅ Saved!")
 
 
-def make_pairing(names, n_orgas, rounds):
-    orgas = names[:n_orgas]
-    participants = names[n_orgas:]
-    orgas_seen = {name: 0 for name in participants}
-    people_seen = {name: set() for name in names}
-    for orga in orgas:
-        people_seen[orga] = {"-"}
-    people_seen["-"] = set(orgas)
-    orgas_seen["-"] = 10000
+@app.command(no_args_is_help=True)
+def one_on_ones(
+    names: Annotated[str, typer.Argument(help="Space or newline separated list of participants.")],
+    rounds: int,
+    tries: int = 100,
+    preferences: str = None
+):
+    """Generate a schedule for one-on-ones for the given names.
 
-    all_pairings = []
+    The names are paired in a round-robin fashion, but keeping preferences into account.
 
-    for i in range(rounds):
-        pairs = {}
-        random.shuffle(participants)
-        random.shuffle(orgas)
-        participants_left = set(participants)
-        orgas_left = set(orgas)
 
-        # if i in (2, 3, 4):
-        #     orgas_left -= {"Charbel"}
-        #     participants_left -= {"-"}
-        #     pairs["Charbel"] = "-"
-        #     pairs["-"] = "Charbel"
 
-        while orgas_left and participants_left:
-            orga = orgas_left.pop()
-            match = min(participants_left - people_seen[orga], key=lambda name: orgas_seen[name])
-            participants_left.remove(match)
-            orgas_seen[match] += 1
-            pairs[orga] = match
-            pairs[match] = orga
-            people_seen[orga].add(match)
-            people_seen[match].add(orga)
+    Examples:
 
-        while participants_left:
-            name = participants_left.pop()
-            match = (participants_left - people_seen[name]).pop()
-            participants_left.remove(match)
-            pairs[name] = match
-            pairs[match] = name
-            people_seen[name].add(match)
-            people_seen[match].add(name)
+        python meta/tools.py one-on-ones "Alice Bob Charlie" 2 --preferences "Alice,Charlie Bob,Alice"
 
-        all_pairings.append(sorted(pairs.items()))
-    return all_pairings
+        python meta/tools.py one-on-ones "$(cat names.txt)" 5 --preferences "$(cat preferences.txt)"
 
-@app.command()
-def one_on_ones(names: Annotated[str, typer.Argument(help="Space or newline separated list of participants.")],
-                           n_orgas: int, rounds: int, tries: int = 10000):
-    """Generate the one-on-ones for the given names.
-
-    The names are shuffled and paired in a round-robin fashion,
-    but the first n_orgas names are always the organizers, which don't
-    have 1-1 between them, and participants are paired in priority with them,
-    if they have had less 1-1s with orgas than the others.
+    Where names.txt contains the list of space or newline separated names,
+    and preferences.txt contains the list of comma separated preferences.
+    Each preference is of the form "person1,person2" and means that person1 prefers to be paired with person2.
     """
 
     names = names.strip()
@@ -744,13 +711,16 @@ def one_on_ones(names: Annotated[str, typer.Argument(help="Space or newline sepa
     else:
         name_list = names.split()
 
-    if len(name_list) % 2:
-        name_list.append("-")
+    if preferences is not None:
+        if "\n" in preferences:
+            preferences_list = [line.split(",") for line in preferences.splitlines()]
+        else:
+            preferences_list = [line.split(",") for line in preferences.split()]
 
     for i in range(tries):
         try:
-            all_pairings = make_pairing(name_list, n_orgas, rounds)
-            print(f"Found a solution after {i} tries.", file=sys.stderr)
+            all_pairings = make_pairing_graph(name_list, rounds, preferences_list)
+            print(f"Found a solution after {i+1} tries.", file=sys.stderr)
             break
         except KeyError:
             continue
@@ -758,9 +728,40 @@ def one_on_ones(names: Annotated[str, typer.Argument(help="Space or newline sepa
         print(f"Failed to find a solution after {tries} tries. Retry?", file=sys.stderr)
         exit(1)
 
-    for row in zip(*all_pairings):
-        print(row[0][0], end="\t")
-        print("\t".join(f"{match}" for name, match in row))
+    for person, matches in all_pairings.items():
+        print(person, *matches, sep=",")
+
+
+def make_pairing_graph(names: list[str], rounds: int, forced_pairs: list[tuple[str, str]]) -> dict[str, list[str]]:
+    assert all(name in names for pair in forced_pairs for name in pair)
+    assert len(names) == len(set(names)), "Names must be unique"
+    assert all(len(pair) == 2 for pair in forced_pairs), "Forced pairs must be pairs"
+
+    import networkx as nx
+
+    G = nx.Graph()
+    G.add_nodes_from(names)
+    # We make a complete graph
+    G.add_edges_from((name, match) for name in names for match in names if name != match)
+    G.add_edges_from(forced_pairs, weight=2)
+
+    all_pairings: dict[str, list[str]] = {
+        name: ["-"] * rounds for name in names
+    }
+
+    for round in range(rounds):
+        # Get a maximum matching
+        matching: set[tuple[str, str]] = nx.max_weight_matching(G)
+        # Remove the edges in the matching
+        G.remove_edges_from(matching)
+        # Add the matching to the pairings
+        for a, b in matching:
+            all_pairings[a][round] = b
+            all_pairings[b][round] = a
+
+    return all_pairings
+
+
 
 
 

@@ -54,7 +54,7 @@ def copy_to_camp_folder(
 
     Configuration File (config.yaml):
     - The tool maintains a configuration file named 'config.yaml' in the same directory as the script.
-    - This file stores the last used folder URL and prefix, to reuse things during the camp, without needing to specify these parameters again.  
+    - This file stores the last used folder URL and prefix, to reuse things during the camp, without needing to specify these parameters again.
 
     Service Account File:
     - A service account file is required to authenticate with the Google Drive API. It is a JSON file.
@@ -119,7 +119,7 @@ def duplicate_career_docs(
     with open(names_and_email_file) as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            email_to_name[row[1]] = row[0]
+            email_to_name[row['email']] = row['name']
 
     doc_name = API.get_file_name(template_id)
     for email, name in email_to_name.items():
