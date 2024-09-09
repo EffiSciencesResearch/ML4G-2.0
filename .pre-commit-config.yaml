@@ -13,14 +13,14 @@ repos:
         - sync
 
 
-# -   repo: https://github.com/psf/black
-#     rev: 24.2.0
-#     hooks:
-#     -   id: black-jupyter
-#         name: format jupyter notebooks with black
-#         args:
-#         - --line-length
-#         - "100"
+-   repo: https://github.com/psf/black
+    rev: 24.2.0
+    hooks:
+    -   id: black
+        name: format python files with black
+        args:
+        - --line-length
+        - "100"
 
 -   repo: local
     hooks:

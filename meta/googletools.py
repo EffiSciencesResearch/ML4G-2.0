@@ -11,16 +11,18 @@ from google_utils import extract_id_from_url, SimpleGoogleAPI
 from InquirerPy import inquirer
 
 
-
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 
 DEFAULT_SERVICE_ACCOUNT_FILE = Path(__file__).parent / "service_account_token.json"
-CONFIG_FILE = Path(__file__).parent / 'config.yaml'
+CONFIG_FILE = Path(__file__).parent / "config.yaml"
 API: SimpleGoogleAPI = None
+
 
 @app.callback()
 def callback(
-    service_account_file: str = typer.Option(DEFAULT_SERVICE_ACCOUNT_FILE, help="Path to the service account file")
+    service_account_file: str = typer.Option(
+        DEFAULT_SERVICE_ACCOUNT_FILE, help="Path to the service account file"
+    )
 ):
     global API
     API = SimpleGoogleAPI(service_account_file)
@@ -29,15 +31,17 @@ def callback(
 def load_config():
     """Load configuration from a YAML file."""
     try:
-        with open(CONFIG_FILE, 'r') as file:
+        with open(CONFIG_FILE, "r") as file:
             return yaml.safe_load(file)
     except Exception:
         return {}
 
+
 def save_config(config):
     """Save configuration to a YAML file."""
-    with open(CONFIG_FILE, 'w') as file:
+    with open(CONFIG_FILE, "w") as file:
         yaml.safe_dump(config, file)
+
 
 @app.command(no_args_is_help=True)
 def copy_to_camp_folder(
@@ -68,11 +72,13 @@ def copy_to_camp_folder(
 
     # Use the last folder URL from the config if not provided
     if not folder_url:
-        folder_url = config.get('last_folder_url', None)
+        folder_url = config.get("last_folder_url", None)
         if not folder_url:
-            raise ValueError("Folder URL must be provided either as an argument or in the config file.")
+            raise ValueError(
+                "Folder URL must be provided either as an argument or in the config file."
+            )
     if not camp_prefix:
-        camp_prefix = config.get('camp_prefix', '')
+        camp_prefix = config.get("camp_prefix", "")
 
     # Extract IDs from URLs
     presentation_id = extract_id_from_url(url)
@@ -93,8 +99,8 @@ def copy_to_camp_folder(
     print(f"New Presentation URL: {new_presentation_url}")
 
     # Update the configuration with the last used folder URL
-    config['last_folder_url'] = folder_url
-    config['camp_prefix'] = camp_prefix
+    config["last_folder_url"] = folder_url
+    config["camp_prefix"] = camp_prefix
     save_config(config)
 
 
@@ -102,8 +108,8 @@ def copy_to_camp_folder(
 def duplicate_career_docs(
     # fmt: off
     names_and_email_file: Annotated[Path, typer.Argument(help="Path to the CSV file containing names and emails without header")],
-    template_id: Annotated[str, typer.Argument(help="Google Docs template ID")],
-    folder_id: Annotated[str, typer.Argument(help="Google Drive folder ID where copies will be saved")],
+    template_url: Annotated[str, typer.Argument(help="Google Docs template Url")],
+    folder_url: Annotated[str, typer.Argument(help="Google Drive folder ID where copies will be saved")],
     # fmt: on
 ):
     """
@@ -119,17 +125,20 @@ def duplicate_career_docs(
     with open(names_and_email_file) as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            email_to_name[row['email']] = row['name']
+            email_to_name[row["email"]] = row["name"]
+
+    template_id = extract_id_from_url(template_url)
+    folder_id = extract_id_from_url(folder_url)
 
     doc_name = API.get_file_name(template_id)
     for email, name in email_to_name.items():
-        print(f'Processing document for {name} ({email})', end='... ')
-        new_name = doc_name.replace('[NAME]', name)
+        print(f"Processing document for {name} ({email})", end="... ", flush=True)
+        new_name = doc_name.replace("[NAME]", name)
         copied_doc_id = API.copy_file(template_id, folder_id, new_name)
-        API.replace_in_document(copied_doc_id, '[NAME]', name)
+        API.replace_in_document(copied_doc_id, "[NAME]", name)
         API.share_document(copied_doc_id, email)
-        print('✅')
+        print("✅")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app()
