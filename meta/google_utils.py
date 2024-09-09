@@ -1,3 +1,4 @@
+# %%
 import re
 from typing import Literal
 import yaml
@@ -5,6 +6,7 @@ import typer
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from pathlib import Path
+import requests
 
 
 def extract_id_from_url(url: str) -> str:
@@ -55,13 +57,13 @@ class SimpleGoogleAPI:
 
         return copied_file['id']
 
-    def replace_in_document(self, document_id: str, initial_text: str, new_text: str) -> dict:
+    def replace_in_document(self, document_id: str, initial_text: str, new_text: str, match_case: bool = True) -> dict:
         requests = [
             {
                 'replaceAllText': {
                     'containsText': {
                         'text': initial_text,
-                        'matchCase': True,
+                        'matchCase': match_case,
                     },
                     'replaceText': new_text,
                 }
@@ -83,11 +85,24 @@ class SimpleGoogleAPI:
             fields='id'
         ).execute()
 
+    def export_gdoc_as_markdown(self, document_id: str) -> str:
+        """Return the content of a Google Doc as markdown."""
+
+        # We use requests to the export link to get the markdown content directly
+        export_link = f"https://www.googleapis.com/drive/v3/files/{document_id}/export?mimeType=text/markdown"
+
+        # Use access token to authenticate
+        headers = {
+            'Authorization': f'Bearer {self.credentials.token}',
+        }
+        response = requests.get(export_link, headers=headers)
+        response.raise_for_status()
+        return response.text
 
 
 
 if __name__ == "__main__":
-    api = SimpleGoogleAPI('./meta/service_account_token.json')
-    print(api.get_file_name("15lHgF6-D1qemtmPaxyTN_Dfm-L91jGRr1njO7fYhRQc"))
-
-    "https://docs.google.com/presentation/d/15lHgF6-D1qemtmPaxyTN_Dfm-L91jGRr1njO7fYhRQc/edit#slide=id.p"
+    api = SimpleGoogleAPI('../meta/service_account_token.json')
+    doc_id = "1b_0XbG1X4oz7WW5iB_Ck_k-tQNaScvWhQvtdZsGSZHg"
+    print(api.get_file_name(doc_id))
+    print(api.export_gdoc_as_markdown(doc_id))
