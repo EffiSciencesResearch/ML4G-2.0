@@ -15,6 +15,7 @@ from pydantic import BaseModel
 import typer
 from rich import print as rprint
 import black
+from typing import Dict
 
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -28,8 +29,7 @@ BADGE_TEMPLATE = """<a href="https://colab.research.google.com/github/EffiScienc
 RE_BADGE = re.compile(BADGE_TEMPLATE.format(repo_path=r'[^"]+'), re.MULTILINE)
 RE_BADGE = re.compile(r'<a href=\\"([^"]+)\\"[^>]*>.*?colab-badge\.svg.*?</a>', re.MULTILINE)
 
-type Notebook = dict
-
+Notebook = Dict[str, any]
 
 def gather_ipynbs(files: list[Path]) -> list[Path]:
     """Recursively gather all the notebooks in the given directories and files.
