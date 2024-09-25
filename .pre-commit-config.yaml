@@ -56,7 +56,8 @@ repos:
     rev: v0.5.2
     hooks:
     -   id: ruff
-        files: '^.*\.py$'
+        # Regex are python regex
+        files: ^(meta|tests)/.*\.py$
         args:
         - "--config"
         - "pyproject.toml"
