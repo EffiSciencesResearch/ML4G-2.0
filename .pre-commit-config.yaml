@@ -51,3 +51,15 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-added-large-files
         args: ['--maxkb=500']
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.2
+    hooks:
+    -   id: ruff
+        # Regex are python regex
+        files: ^(meta|tests)/.*\.py$
+        args:
+        - "--config"
+        - "pyproject.toml"
+        - "--fix"
+        - "--exit-non-zero-on-fix"
