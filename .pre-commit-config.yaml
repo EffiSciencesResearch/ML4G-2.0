@@ -14,7 +14,7 @@ repos:
 
 
 -   repo: https://github.com/psf/black
-    rev: 24.2.0
+    rev: 25.1.0
     hooks:
     -   id: black
         name: format python files with black
@@ -45,15 +45,17 @@ repos:
         - list-of-workshops-readme
 
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
     -   id: check-yaml
     -   id: end-of-file-fixer
     -   id: check-added-large-files
         args: ['--maxkb=500']
+        # To exclude more files, see https://pre-commit.com/#regular-expressions
+        exclude: ^uv.lock$
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.2
+    rev: v0.9.8
     hooks:
     -   id: ruff
         # Regex are python regex
