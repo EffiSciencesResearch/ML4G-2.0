@@ -11,3 +11,4 @@ scratch/
 .envrc
 workshops/gradcam/gradCam/
 service_account_token.json
+meta/camps
