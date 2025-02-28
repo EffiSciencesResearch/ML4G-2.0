@@ -1,5 +1,5 @@
 import streamlit as st
-from camp_utils import get_current_campfile, get_current_camp, set_current_camp
+from camp_utils import get_current_campfile, get_current_camp, edit_current_camp
 import datetime
 
 
@@ -34,7 +34,8 @@ with st.form("camp-edit", border=False):
     )
     participants = st.text_area(
         "Participants name and email CSV",
-        value=camp.participants_name_and_email_csv or "name,email\n",
+        value=camp.participants_name_and_email_csv,
+        placeholder="name,email\njack,jack@ml4good.org\njulia,julia@ml4bad.com",
         help="CSV with columns 'name' and 'email'.",
         height=200,
     )
@@ -49,11 +50,4 @@ with st.form("camp-edit", border=False):
 
         # Remove newdata that is None
         new_data = {k: v for k, v in new_data.items() if v not in (None, "")}
-        st.write(new_data)
-
-        print("Old camp", camp)
-        new_camp = camp.model_copy(update=new_data)
-        print("New camp", new_camp)
-
-        campfile.write_text(new_camp.model_dump_json())
-        set_current_camp(new_camp, campfile)
+        edit_current_camp(new_data)

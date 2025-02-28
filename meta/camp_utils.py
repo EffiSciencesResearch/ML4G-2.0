@@ -18,7 +18,7 @@ class Camp(BaseModel):
     password: str
     date: str
     teamup_admin_url: str | None = None
-    participants_name_and_email_csv: str | None = None
+    participants_name_and_email_csv: str = "name,email\n"
 
     @classmethod
     def new(cls, name: str, date: str) -> "Camp":
@@ -76,3 +76,15 @@ def get_current_campfile() -> Path | None:
 def set_current_camp(camp: Camp, campfile: Path):
     st.session_state.current_camp = camp
     st.session_state.current_campfile = campfile
+
+
+def edit_current_camp(**kwargs):
+    camp = get_current_camp()
+    campfile = get_current_campfile()
+    if not camp:
+        raise ValueError("No camp selected")
+
+    new_camp = camp.model_copy(update=kwargs)
+
+    campfile.write_text(new_camp.model_dump_json())
+    set_current_camp(new_camp, campfile)
