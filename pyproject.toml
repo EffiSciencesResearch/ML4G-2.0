@@ -39,6 +39,7 @@ dependencies = [
     "google-auth-oauthlib",
     "google-auth-httplib2",
     "streamlit>=1.42.2",
+    "python-dotenv>=1.0.1",
 ]
 
 [dependency-groups]
