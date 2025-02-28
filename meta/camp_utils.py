@@ -13,6 +13,7 @@ PATTERN_TEAMUP_URL = re.compile("https://teamup.com/([a-z0-9]+)")
 
 
 class Camp(BaseModel):
+    # If you add a new field here, remember to add it to edit_camp.py too.
     name: str
     password: str
     date: str
@@ -53,12 +54,24 @@ def get_current_camp() -> Camp | None:
     if is_in_streamlit():
         return st.session_state.get("current_camp", None)
     else:
+        campfile = get_current_campfile()
+        if campfile:
+            return list_camps().get(campfile, None)
+        else:
+            return None
+
+
+def get_current_campfile() -> Path | None:
+    if is_in_streamlit():
+        return st.session_state.get("current_campfile", None)
+    else:
         # Take the last one
         camps = list_camps()
         if camps:
-            return max(camps.values(), key=lambda c: c.date)
+            return max(camps.keys(), key=lambda c: camps[c].date)
         return None
 
 
-def set_current_camp(camp: Camp):
+def set_current_camp(camp: Camp, campfile: Path):
     st.session_state.current_camp = camp
+    st.session_state.current_campfile = campfile

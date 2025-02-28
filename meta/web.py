@@ -3,14 +3,6 @@ import streamlit as st
 from camp_utils import list_camps, Camp, CAMPS_DIR, get_current_camp, set_current_camp
 
 
-def log(message: str | None = None):
-    if "logs" not in st.session_state:
-        st.session_state.logs = []
-    if message:
-        st.session_state.logs.append(message)
-    return st.session_state.logs
-
-
 st.title("Welcome to the ML4G tools portal!")
 
 st.markdown(
@@ -58,8 +50,7 @@ with col_select_camp:
             if password != camp.password:
                 st.error("Invalid password")
             else:
-                set_current_camp(camp)
-                log(f"Selected camp `{camp.name}`")
+                set_current_camp(camp, camp_file)
                 st.rerun()
 
 
@@ -84,11 +75,4 @@ with col_new_camp:
         camp_file.write_text(camp.model_dump_json())
         camps[camp_file] = camp
 
-        log(f"Created camp `{name}` with password `{camp.password}` :tada:")
-        set_current_camp(camp)
-
-
-with st.sidebar:
-    st.title("Logs")
-    for log_message in log():
-        st.write(log_message)
+        set_current_camp(camp, camp_file)
