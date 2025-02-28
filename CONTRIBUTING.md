@@ -2,17 +2,23 @@
 
 To setup your machine for adding and editing the workshops, follow these steps:
 
-#### Linux setup
+#### Linux/Mac setup
+We using the fantastic [`uv`](https://docs.astral.sh/uv/) tool to manage the environment and dependencies.
+See here for potentially more up-to-date [uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer).
+
 ```sh
-# Create a virtual environemnt (in the current folder), for instance with venv.
-python -m venv .env
+# One way to install uv. But you might want to do it through your package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-# Activate the venv
-source .env/bin/activate
+Then setup the environment with the following commands:
+```sh
 
-# Install all the dependencies. If you don't have a GPU, start by installing pytorch without GPU support
-# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
+# Create a virtual environment, and install the dependencies without updating their locked version
+uv sync --frozen
+
+# Activate the virtual environment
+source .venv/bin/activate
 
 # Setup the pre-commit hooks
 pre-commit install
@@ -21,15 +27,15 @@ pre-commit install
 #### Windows setup
 (equivalent according to GPT4)
 ```cmd
-REM Create a virtual environment (in the current folder), for instance with venv.
-python -m venv .env
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+```cmd
+REM Create a virtual environment, and install the dependencies without updating their locked version
+uv sync --frozen
 
 REM Activate the venv
-.env\Scripts\activate
-
-REM Install all the dependencies. If you don't have a GPU, start by installing pytorch without GPU support
-REM pip install torch  --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements.txt
+.venv\Scripts\activate
 
 REM Setup the pre-commit hooks
 pre-commit install
@@ -68,6 +74,7 @@ To generate the notebooks, run the following command:
 ```sh
 python meta/tools.py sync <path_to_notebook>.ipynb
 ```
+Note that this command is run automatically by the pre-commit hooks, when you commit. But you might want to run it manually to check.
 
 Here name `<name>` can be any sequence of letters (lowercase), but
 we usually use `hard`, `normal`, `all`, `none` or `solution`.
