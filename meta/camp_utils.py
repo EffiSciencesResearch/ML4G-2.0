@@ -17,7 +17,8 @@ class Camp(BaseModel):
     name: str
     password: str
     date: str
-    teamup_admin_url: str | None
+    teamup_admin_url: str | None = None
+    participants_name_and_email_csv: str | None = None
 
     @classmethod
     def new(cls, name: str, date: str) -> "Camp":

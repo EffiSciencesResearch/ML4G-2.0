@@ -71,6 +71,7 @@ with col_new_camp:
             "### Please write down the password for this camp. It will not be shown again.\n\n"
             f"### Password: `{camp.password}`"
         )
+        st.write("You can continue configuring the camp in **Edit Camp** on the left.")
 
         camp_file.write_text(camp.model_dump_json())
         camps[camp_file] = camp

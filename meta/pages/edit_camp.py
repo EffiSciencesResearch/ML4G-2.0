@@ -28,11 +28,23 @@ with st.form("camp-edit", border=False):
         disabled=camp.teamup_admin_url is not None,
     )
 
+    st.write(
+        "We need the participants names and emails here mostly to send the career planning docs. "
+        "We put it as CSV to make it easier to copy-paste and edit."
+    )
+    participants = st.text_area(
+        "Participants name and email CSV",
+        value=camp.participants_name_and_email_csv or "name,email\n",
+        help="CSV with columns 'name' and 'email'.",
+        height=200,
+    )
+
     if st.form_submit_button("Save"):
         new_data = dict(
             name=name,
             date=date.isoformat(),
             teamup_admin_url=teamup_admin_url,
+            participants_name_and_email_csv=participants,
         )
 
         # Remove newdata that is None
