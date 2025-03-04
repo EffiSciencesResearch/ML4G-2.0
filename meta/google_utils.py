@@ -85,6 +85,14 @@ class SimpleGoogleAPI:
         if new_name is None:
             new_name = self.get_file_name(file_id)
 
+        # This will not work with service account created after April 2025.
+        # ---
+        # > Previously, Google Cloud IAM service accounts had access to 15 GB of Google Workspace Storage. However, because they aren't directly managed by administrators, any new service accounts created after April 15, 2025, won't receive this storage. Existing service accounts created before this date will retain their storage.
+        # > To be able to upload items to Drive with service accounts created after April 15, 2025:
+        # > - Upload items to Shared Drives
+        # > - Set up OAuth consent to upload items on behalf of a human user
+        # > - Use impersonation via domain wide delegation
+        # ---
         copied_file = (
             self.drive_service.files()
             .copy(fileId=file_id, body={"name": new_name, "parents": [folder_id]})
