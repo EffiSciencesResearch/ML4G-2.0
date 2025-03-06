@@ -42,7 +42,7 @@ class Camp(BaseModel):
 def list_camps() -> dict[Path, Camp]:
     camps = {}
     for camp_file in CAMPS_DIR.glob("*.json"):
-        camps[camp_file] = Camp.model_validate_json(camp_file.read_text())
+        camps[camp_file] = Camp.model_validate_json(camp_file.read_text("utf-8"))
 
     return camps
 
@@ -73,11 +73,6 @@ def get_current_campfile() -> Path | None:
         return None
 
 
-def set_current_camp(camp: Camp, campfile: Path):
-    st.session_state.current_camp = camp
-    st.session_state.current_campfile = campfile
-
-
 def edit_current_camp(**kwargs):
     camp = get_current_camp()
     campfile = get_current_campfile()
@@ -87,4 +82,4 @@ def edit_current_camp(**kwargs):
     new_camp = camp.model_copy(update=kwargs)
 
     campfile.write_text(new_camp.model_dump_json())
-    set_current_camp(new_camp, campfile)
+    st.session_state.current_camp = camp

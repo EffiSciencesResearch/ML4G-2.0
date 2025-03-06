@@ -1,6 +1,7 @@
 import datetime
 import streamlit as st
-from camp_utils import list_camps, Camp, CAMPS_DIR, get_current_camp, set_current_camp
+from camp_utils import list_camps, Camp, CAMPS_DIR
+from streamlit_utils import State
 
 
 st.title("Welcome to the ML4G tools portal!")
@@ -21,9 +22,10 @@ Enjoy! :rocket:
 """
 )
 
+state = State()
 
-if get_current_camp():
-    st.write(f"## Currently editing camp `{get_current_camp().name}`")
+if state.current_camp:
+    st.write(f"## Currently editing camp `{state.current_camp.name}`")
 else:
     st.write("## Start by selecting a camp")
 
@@ -40,18 +42,26 @@ with col_select_camp:
         st.warning("No camps found. Please create a camp first.")
         st.stop()
 
-    with st.form("select_camp"):
+    with st.container(border=True):
         sorted_camps = sorted(camps, key=lambda c: camps[c].date, reverse=True)
         camp_file = st.selectbox("Select camp", sorted_camps, format_func=lambda c: camps[c].name)
         camp = camps[camp_file]
-        password = st.text_input("Password", type="password")
 
-        if st.form_submit_button("Select this one"):
-            if password != camp.password:
-                st.error("Invalid password")
-            else:
-                set_current_camp(camp, camp_file)
+        if state.auto_login(camp_file):
+            st.write("You are already logged in this camp.")
+            if st.button("Log out"):
+                state.logout()
+                st.success("You were logged out.")
                 st.rerun()
+        else:
+            password = st.text_input("Password", type="password")
+
+            if st.button("Select this one"):
+                if state.login(camp_file, password):
+                    st.error("Invalid password")
+                else:
+                    st.success("You were logged in.")
+                    st.rerun()
 
 
 with col_new_camp:
@@ -74,6 +84,5 @@ with col_new_camp:
         st.write("You can continue configuring the camp in **Edit Camp** on the left.")
 
         camp_file.write_text(camp.model_dump_json())
-        camps[camp_file] = camp
 
-        set_current_camp(camp, camp_file)
+        state.login(camp_file, camp.password)
