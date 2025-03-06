@@ -60,16 +60,14 @@ with col_select_camp:
                 if st.button("Log out"):
                     state.logout()
                     st.success("You were logged out.")
-                    st.rerun()
             else:
                 password = st.text_input("Password", type="password")
 
                 if st.button("Select this one"):
                     if state.login(camp_file, password):
-                        st.error("Invalid password")
-                    else:
                         st.success("You were logged in.")
-                        st.rerun()
+                    else:
+                        st.error("Invalid password")
 
 
 with col_new_camp:
