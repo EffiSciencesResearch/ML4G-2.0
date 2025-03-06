@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 import streamlit as st
-from camp_utils import edit_current_camp, get_current_camp
+from camp_utils import get_current_camp
 from google_utils import extract_id_from_url, SimpleGoogleAPI
 
 
@@ -22,14 +22,13 @@ First you can edit the participants list below right here, in CSV format if need
 )
 
 participants = st.text_area(
-    "Participants name and email CSV - saves to the camp file",
+    "Participants name and email CSV - temporary override",
     value=camp.participants_name_and_email_csv,
     placeholder="name,email\njack,jack@ml4good.org\njulia,julia@ml4bad.com",
     help="CSV with columns 'name' and 'email'.",
     height=200,
 )
 if participants != camp.participants_name_and_email_csv:
-    edit_current_camp(participants_name_and_email_csv=participants)
     st.rerun()
 
 template_url = st.text_input(
@@ -38,6 +37,10 @@ template_url = st.text_input(
 folder_url = st.text_input(
     "Folder to put the 1-1 docs",
 )
+
+
+if not template_url or not folder_url:
+    st.stop()
 
 
 @st.cache_data()
