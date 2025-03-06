@@ -1,9 +1,5 @@
 # %%
 from collections import defaultdict
-import os
-from pydantic import BaseModel
-import requests
-import json
 from datetime import datetime, timedelta
 import dotenv
 
@@ -11,144 +7,24 @@ import streamlit as st
 
 from camp_utils import get_current_camp
 from streamlit_utils import State
+from teamup_utils import Teamup, Event
 
+MEAL_INDICATOR = "🥘"
 
 dotenv.load_dotenv()
 camp = get_current_camp()
-
-
-PARTICIPANTS_CALENDAR_NAME = "Participants"
-MEAL_INDICATOR = "🥘"
-BASE_API_URL = "https://api.teamup.com"
-
-
-class Event(BaseModel):
-    id: str
-    series_id: int | None
-    remote_id: int | None
-    subcalendar_id: int
-    subcalendar_ids: list[int]
-    all_day: bool
-    rrule: str | None
-    title: str
-    who: str
-    location: str
-    notes: str
-    version: str
-    readonly: bool
-    tz: str
-    attachments: list[str]
-    start_dt: str
-    end_dt: str
-    ristart_dt: str | None
-    rsstart_dt: str | None
-    creation_dt: str
-    update_dt: str | None
-    delete_dt: str | None
-    signup_enabled: bool
-    comments_enabled: bool
-    comments_visibility: str
-    comments: list
-
-    @property
-    def start_datetime(self):
-        return datetime.fromisoformat(self.start_dt)
-
-    @property
-    def end_datetime(self):
-        return datetime.fromisoformat(self.end_dt)
-
-    @property
-    def duration(self):
-        return self.end_datetime - self.start_datetime
-
-
-def api_get(*path: str, **query: str):
-    url = "/".join([BASE_API_URL, camp.teamup_admin_calendar_key, *path])
-    headers = {
-        "Teamup-Token": os.environ["TEAMUP_API_KEY"],
-    }
-    print("GET", url, query)
-    response = requests.get(url, headers=headers, params=query)
-    if response.status_code != 200:
-        print(response.json())
-        raise Exception("Failed to get 200 from Teamup")
-    return response.json()
-
-
-def api_put(*path: str, data: dict, post: bool = False):
-    url = "/".join([BASE_API_URL, camp.teamup_admin_calendar_key, *path])
-    headers = {
-        "Teamup-Token": os.environ["TEAMUP_API_KEY"],
-        "Content-Type": "application/json",
-    }
-    if post:
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-    else:
-        response = requests.put(url, headers=headers, data=json.dumps(data))
-    if not response.ok:
-        print(response.json())
-        raise Exception(f"Got {response.status_code} from Teamup")
-    return response.json()
-
-
-def toggle_calendar(events: list[Event], event_idx: int, calendar_id: int):
-    event = events[event_idx]
-    if calendar_id in event.subcalendar_ids:
-        event.subcalendar_ids.remove(calendar_id)
-    else:
-        event.subcalendar_ids.append(calendar_id)
-    response = api_put("events", event.id, data=event.model_dump())
-
-    # Update the event in the list
-    events[event_idx] = Event.model_validate(response["event"])
-
-
-def get_or_make_key(desired_data: dict, name: str) -> str:
-    keys = api_get("keys")
-
-    # Try to find a key which has desired_data
-    for key in keys["keys"]:
-        if all(key[k] == v for k, v in desired_data.items()):
-            return key["key"]
-
-    # If we didn't find a key, create one
-    desired_data["name"] = name
-    response = api_put("keys", data=desired_data, post=True)
-    return response["key"]["key"]
+teamup = Teamup(camp)
 
 
 # %%
+@st.cache_data()
+def get_or_make_participants_key():
+    return teamup.get_or_make_participants_key()
 
 
 @st.cache_data()
-def get_or_make_modifier_key() -> str:
-    # Try to find a key which has:
-    desired_data = {
-        "active": True,
-        "admin": False,
-        "role": "modify",
-        "share_type": "all_subcalendars",
-    }
-
-    return get_or_make_key(desired_data, "Write access for organizing team")
-
-
-@st.cache_data()
-def get_or_make_participants_key() -> str:
-    subcalendars = api_get("subcalendars")["subcalendars"]
-    participant_subcalendar_id = next(
-        sc["id"] for sc in subcalendars if sc["name"] == PARTICIPANTS_CALENDAR_NAME
-    )
-
-    desired_data = {
-        "active": True,
-        "admin": False,
-        "share_type": "selected_subcalendars",
-        "subcalendar_permissions": {str(participant_subcalendar_id): "read_only"},
-    }
-
-    return get_or_make_key(desired_data, "Read access for participants")
+def get_or_make_modifier_key():
+    return teamup.get_or_make_modifier_key()
 
 
 @st.cache_resource()
@@ -161,13 +37,13 @@ def get_events():
         "endDate": next_year.strftime("%Y-%m-%d"),
     }
 
-    events = api_get("events", **query)
+    events = teamup.get("events", **query)
     return [Event.model_validate(e) for e in events["events"]]
 
 
 @st.cache_data()
 def get_subcalendar_to_name() -> dict[int, str]:
-    subcalendars = api_get("subcalendars")["subcalendars"]
+    subcalendars = teamup.get("subcalendars")["subcalendars"]
     return {sc["id"]: sc["name"] for sc in subcalendars}
 
 
@@ -212,7 +88,7 @@ with st.sidebar:
         events = get_events()
 
 participant_calendar_id = next(
-    id_ for id_, name in subcalendar_to_name.items() if name == PARTICIPANTS_CALENDAR_NAME
+    id_ for id_, name in subcalendar_to_name.items() if name == teamup.participant_calendar_name
 )
 
 hides = []
@@ -285,9 +161,9 @@ for i, event in enumerate(events):
         if subcalendar_id in event.subcalendar_ids:
             # emoji
             if col.button("✅", key=f"{event.id}-{subcalendar_id}-ok"):
-                toggle_calendar(events, i, subcalendar_id)
+                teamup.toggle_calendar(events, i, subcalendar_id)
                 st.rerun()
         else:
             if col.button("❌", key=f"{event.id}-{subcalendar_id}-no"):
-                toggle_calendar(events, i, subcalendar_id)
+                teamup.toggle_calendar(events, i, subcalendar_id)
                 st.rerun()

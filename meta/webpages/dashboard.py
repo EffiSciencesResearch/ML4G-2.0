@@ -1,19 +1,22 @@
-import os
-
 import streamlit as st
 import dotenv
 
-from camp_utils import Camp
 from streamlit_utils import State
 
 dotenv.load_dotenv()
 
 
-st.title("Welcome to the ML4G tools portal!")
+state = State()
+
+with st.sidebar:
+    state.login_form(key="sidebar_form")
+
+
+name = "" if state.current_camp is None else f" *{state.current_camp.name}*"
+st.title(f"Welcome to the ML4G{name} tools portal!")
 
 st.markdown(
-    """
-This page is and will grow into a collection of handy tools to
+    """This page is and will grow into a collection of handy tools to
 help run the ML4G bootcamps.
 
 We aim to make those tools self-explanatory, so that they
@@ -28,45 +31,45 @@ Enjoy! :rocket:
 )
 
 
-state = State()
-
-if state.current_camp:
-    st.write(f"## Currently editing camp `{state.current_camp.name}`")
-else:
-    st.write("## Start by selecting a camp")
+if not state.current_camp:
+    st.write("## 👈🏻 Start by selecting a camp on the left sidebar")
+    st.write("A password should have been given to you by the camp organizer.")
+    st.stop()
 
 
-# Now two options: select a new camp or create a new one
-col_select_camp, col_new_camp = st.columns(2)
+# ------------------------------
+
+# # Now two options: select a new camp or create a new one
+# col_select_camp, col_new_camp = st.columns(2)
 
 
-with col_select_camp:
-    st.header("Select a camp")
+# with col_select_camp:
+#     st.header("Select a camp")
 
-    with st.container(border=True):
-        state.login_form()
+#     with st.container(border=True):
+#         state.login_form()
 
 
-with col_new_camp:
-    st.header("Create a new camp")
+# with col_new_camp:
+#     st.header("Create a new camp")
 
-    with st.form("create_camp"):
-        name = st.text_input("Name")
-        date = st.date_input("Date")
+#     with st.form("create_camp"):
+#         name = st.text_input("Name")
+#         date = st.date_input("Date")
 
-        disabled = "ENABLE_CREATE_CAMP" not in os.environ
-        letsgooo = st.form_submit_button("Create camp", disabled=disabled)
-        if disabled:
-            st.warning("It's not yet possible to create new camp from the public portal.")
+#         disabled = "ENABLE_CREATE_CAMP" not in os.environ
+#         letsgooo = st.form_submit_button("Create camp", disabled=disabled)
+#         if disabled:
+#             st.warning("It's not yet possible to create new camp from the public portal.")
 
-    if letsgooo:
-        camp = Camp.new(name=name, date=date.strftime("%Y-%m-%d"))
-        camp.save_to_disk()
+#     if letsgooo:
+#         camp = Camp.new(name=name, date=date.strftime("%Y-%m-%d"))
+#         camp.save_to_disk()
 
-        st.warning(
-            "### Please write down the password for this camp. It will not be shown again.\n\n"
-            f"### Password: `{camp.password}`"
-        )
-        st.write("You can continue configuring the camp in **Edit Camp** on the left.")
+#         st.warning(
+#             "### Please write down the password for this camp. It will not be shown again.\n\n"
+#             f"### Password: `{camp.password}`"
+#         )
+#         st.write("You can continue configuring the camp in **Edit Camp** on the left.")
 
-        state.login(camp.name, camp.password)
+#         state.login(camp.name, camp.password)

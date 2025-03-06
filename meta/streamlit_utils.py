@@ -26,14 +26,15 @@ class State:
             )
             self._session_storage = SessionStorage()
 
-    def login(self, camp_name: str, password: str) -> Camp | None:
+    def login(self, camp_name: str, password: str, save_to_browser: bool = True) -> Camp | None:
         camp = Camp.load_from_disk(camp_name)
         if camp.password != password:
             return None
 
         st.session_state.current_camp = camp
-        self.save_camp_password_in_browser(camp.name, password)
-        self.save_camp_in_browser(camp.name)
+        if save_to_browser:
+            self.save_camp_password_in_browser(camp.name, password)
+            self.save_camp_in_browser(camp.name)
         return camp
 
     def auto_login(self, camp_name: str | None = None) -> Camp | None:
@@ -45,7 +46,7 @@ class State:
 
         camp = Camp.load_from_disk(camp_name)
         known_passwords = self.get_camp_passwords()
-        return self.login(camp_name, known_passwords.get(camp.name, ""))
+        return self.login(camp_name, known_passwords.get(camp.name, ""), save_to_browser=False)
 
     def logout(self):
         st.session_state.pop("current_camp", None)
@@ -84,7 +85,7 @@ class State:
 
     # ----
 
-    def login_form(self) -> Camp | None:
+    def login_form(self, key: str = "login_form") -> Camp | None:
         camps = Camp.list_all()
         camps.sort(key=lambda c: c.date, reverse=True)
 
@@ -99,12 +100,13 @@ class State:
             camps,
             format_func=lambda c: c.name,
             index=default_camp_idx,
+            key=key + "_camp_select",
         )
         assert camp is not None
 
         if self.auto_login(camp.name):
             st.write(f"You are logged in for `{camp.name}`.")
-            if st.button("Log out", on_click=self.logout):
+            if st.button("Log out", on_click=self.logout, key=key + "_logout"):
                 st.toast("You were logged out.")
                 return None
             return camp
@@ -112,6 +114,7 @@ class State:
         password = st.text_input(
             "Password",
             type="password",
+            key=key + "_password",
         )
 
         if not password:
