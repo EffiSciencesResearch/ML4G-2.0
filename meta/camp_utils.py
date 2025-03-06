@@ -25,6 +25,18 @@ class Camp(BaseModel):
         password = "".join(random.choices(string.ascii_letters, k=16))
         return cls(name=name, password=password, date=date, teamup_admin_url=None)
 
+    def save_to_disk(self):
+        campfile = CAMPS_DIR / f"{self.name}.json"
+        campfile.write_text(self.model_dump_json())
+
+    @classmethod
+    def load_from_disk(self, name: str) -> "Camp":
+        assert "\\" not in name, "Invalid camp name"
+        path = CAMPS_DIR / f"{name}.json"
+        camp = self.model_validate_json(path.read_text("utf-8"))
+        assert camp.name == name, f"Camp name {camp.name} does not match file name {name}"
+        return camp
+
     def validate_teamup(self) -> str | None:
         if not self.teamup_admin_url:
             return "No teamup admin URL set"
@@ -39,10 +51,12 @@ class Camp(BaseModel):
         return PATTERN_TEAMUP_URL.match(self.teamup_admin_url).group(1)
 
 
-def list_camps() -> dict[Path, Camp]:
-    camps = {}
-    for camp_file in CAMPS_DIR.glob("*.json"):
-        camps[camp_file] = Camp.model_validate_json(camp_file.read_text("utf-8"))
+def list_camps() -> list[Camp]:
+    camps = []
+    for file in CAMPS_DIR.glob("*.json"):
+        camp = Camp.model_validate_json(file.read_text("utf-8"))
+        assert camp.name == file.stem, f"Camp name {camp.name} does not match file name {file.stem}"
+        camps.append(camp)
 
     return camps
 
@@ -55,31 +69,19 @@ def get_current_camp() -> Camp | None:
     if is_in_streamlit():
         return st.session_state.get("current_camp", None)
     else:
-        campfile = get_current_campfile()
-        if campfile:
-            return list_camps().get(campfile, None)
-        else:
-            return None
-
-
-def get_current_campfile() -> Path | None:
-    if is_in_streamlit():
-        return st.session_state.get("current_campfile", None)
-    else:
-        # Take the last one
+        # Take the most recent one
         camps = list_camps()
         if camps:
-            return max(camps.keys(), key=lambda c: camps[c].date)
+            return max(camps, key=lambda c: c.date)
         return None
 
 
 def edit_current_camp(**kwargs):
     camp = get_current_camp()
-    campfile = get_current_campfile()
     if not camp:
         raise ValueError("No camp selected")
 
     new_camp = camp.model_copy(update=kwargs)
 
-    campfile.write_text(new_camp.model_dump_json())
+    new_camp.save_to_disk()
     st.session_state.current_camp = camp

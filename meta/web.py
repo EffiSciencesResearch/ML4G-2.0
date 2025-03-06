@@ -1,10 +1,9 @@
-import datetime
 import os
 
 import streamlit as st
 import dotenv
 
-from camp_utils import list_camps, Camp, CAMPS_DIR
+from camp_utils import list_camps, Camp
 from streamlit_utils import State
 
 dotenv.load_dotenv()
@@ -43,19 +42,17 @@ col_select_camp, col_new_camp = st.columns(2)
 with col_select_camp:
     st.header("Select a camp")
     camps = list_camps()
+    camps.sort(key=lambda c: c.date, reverse=True)
 
     if not camps:
         st.warning("No camps found. Please create a camp first.")
     else:
 
         with st.container(border=True):
-            sorted_camps = sorted(camps, key=lambda c: camps[c].date, reverse=True)
-            camp_file = st.selectbox(
-                "Select camp", sorted_camps, format_func=lambda c: camps[c].name
-            )
-            camp = camps[camp_file]
+            camp = st.selectbox("Select camp", camps, format_func=lambda c: c.name)
+            assert camp is not None
 
-            if state.auto_login(camp_file):
+            if state.auto_login(camp.name):
                 st.write("You are already logged in this camp.")
                 if st.button("Log out"):
                     state.logout()
@@ -64,7 +61,7 @@ with col_select_camp:
                 password = st.text_input("Password", type="password")
 
                 if st.button("Select this one"):
-                    if state.login(camp_file, password):
+                    if state.login(camp.name, password):
                         st.success("You were logged in.")
                     else:
                         st.error("Invalid password")
@@ -84,8 +81,7 @@ with col_new_camp:
 
     if letsgooo:
         camp = Camp.new(name=name, date=date.strftime("%Y-%m-%d"))
-        now = datetime.datetime.now()
-        camp_file = CAMPS_DIR / f"{now.strftime('%Y-%m-%d %H:%M:%S')} {name}.json"
+        camp.save_to_disk()
 
         st.warning(
             "### Please write down the password for this camp. It will not be shown again.\n\n"
@@ -93,6 +89,4 @@ with col_new_camp:
         )
         st.write("You can continue configuring the camp in **Edit Camp** on the left.")
 
-        camp_file.write_text(camp.model_dump_json())
-
-        state.login(camp_file, camp.password)
+        state.login(camp.name, camp.password)

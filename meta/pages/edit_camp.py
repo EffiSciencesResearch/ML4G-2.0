@@ -1,5 +1,5 @@
 import streamlit as st
-from camp_utils import get_current_campfile, get_current_camp, edit_current_camp
+from camp_utils import get_current_camp, edit_current_camp
 import datetime
 from streamlit_utils import State
 
@@ -9,7 +9,6 @@ state.auto_login()
 
 
 camp = get_current_camp()
-campfile = get_current_campfile()
 if not camp:
     st.error("Please select a camp first on the main page.")
     st.stop()
