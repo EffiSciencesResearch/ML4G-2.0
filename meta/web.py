@@ -1,7 +1,13 @@
 import datetime
+import os
+
 import streamlit as st
+import dotenv
+
 from camp_utils import list_camps, Camp, CAMPS_DIR
 from streamlit_utils import State
+
+dotenv.load_dotenv()
 
 
 st.title("Welcome to the ML4G tools portal!")
@@ -70,7 +76,11 @@ with col_new_camp:
     with st.form("create_camp"):
         name = st.text_input("Name")
         date = st.date_input("Date")
-        letsgooo = st.form_submit_button("Create camp")
+
+        disabled = "ENABLE_CREATE_CAMP" not in os.environ
+        letsgooo = st.form_submit_button("Create camp", disabled=disabled)
+        if disabled:
+            st.warning("It's not yet possible to create new camp from the public portal.")
 
     if letsgooo:
         camp = Camp.new(name=name, date=date.strftime("%Y-%m-%d"))
