@@ -1938,6 +1938,7 @@ dependencies = [
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "streamlit" },
+    { name = "streamlit-browser-session-storage" },
     { name = "toml" },
     { name = "torch" },
     { name = "torchvision" },
@@ -1984,6 +1985,7 @@ requires-dist = [
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "streamlit", specifier = ">=1.42.2" },
+    { name = "streamlit-browser-session-storage", specifier = ">=0.0.12" },
     { name = "toml" },
     { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", index = "https://download.pytorch.org/whl/cpu" },
@@ -3610,6 +3612,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/08/58/b1875ccb6901cec7a721059bfd9122107d29e0b0ccfdcea9d353af6b5c52/streamlit-1.42.2.tar.gz", hash = "sha256:62026dbdcb482790933f658b096d7dd58fa70da89c1f06fbc3658b91dcd4dab2", size = 9169615 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/08/c962e38f4450dafb98af49f8988a736dd67ae9cc26a5704c43269f506bc8/streamlit-1.42.2-py2.py3-none-any.whl", hash = "sha256:e2516c7fcd17a11a85cc1999fae58ace0a6458e2b4c1a411ed3d75b1aee2eb93", size = 9559800 },
+]
+
+[[package]]
+name = "streamlit-browser-session-storage"
+version = "0.0.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/32/c2198eb437154469366ffbe908810558ea91be96c2653d29ae6a8ea3dfd9/streamlit_browser_session_storage-0.0.12.tar.gz", hash = "sha256:20a2cd38698fa1900eb4d7086576319a8dda6b577f199142d954cdb56e2331fc", size = 536633 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6d/d7/c76a401fb0ffcb9414203e7ead5eff6bf6d7cea1b38a1cb09bb448275e8e/streamlit_browser_session_storage-0.0.12-py3-none-any.whl", hash = "sha256:c0ed256b505592113978e99e53e4ed2d158d9e64013a758f6b36153b7309c358", size = 543423 },
 ]
 
 [[package]]
