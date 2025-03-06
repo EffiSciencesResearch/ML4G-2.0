@@ -47,6 +47,19 @@ def get_subcalendar_to_name() -> dict[int, str]:
     return {sc["id"]: sc["name"] for sc in subcalendars}
 
 
+def nice_event(event: Event, day: bool = False) -> str:
+    start = event.start_datetime.strftime("%H:%M")
+    end = event.end_datetime.strftime("%H:%M")
+    if day:
+        # Tue 12 12:00 - 14:00
+        start = event.start_datetime.strftime("%a %d") + " " + start
+
+    out = f":green[{start} - {end}] {event.title}"
+    if event.who:
+        out += f" ({event.who})"
+    return out
+
+
 # %%
 st.set_page_config(page_title="TA Assignment", page_icon="📅", layout="wide")
 
@@ -103,29 +116,61 @@ with st.sidebar:
         hides.append(MEAL_INDICATOR)
 
 
-st.header("Summary")
+cols = st.columns(2)
+with cols[0]:
+    st.header("Work hours per TA")
 
-# Show:
-# - number of hours assigned to each TA
-# - workshops without TA
+    ta_to_hours = defaultdict(int)
+    for event in events:
+        if MEAL_INDICATOR in event.title:
+            continue
+        # if no participant
+        if participant_calendar_id not in event.subcalendar_ids:
+            continue
+        for ta_id in event.subcalendar_ids:
+            ta_to_hours[ta_id] += event.duration.total_seconds() / 3600
 
-# TA to hours
-ta_to_hours = defaultdict(int)
-for event in events:
-    if MEAL_INDICATOR in event.title:
-        continue
-    # if no participant
-    if participant_calendar_id not in event.subcalendar_ids:
-        continue
-    for ta_id in event.subcalendar_ids:
-        ta_to_hours[ta_id] += event.duration.total_seconds() / 3600
+    text = "Hours in workshops:"
+    for ta_id, hours in sorted(ta_to_hours.items(), key=lambda x: -x[1]):
+        h, m = divmod(hours, 1)
+        text += f"\n- {subcalendar_to_name[ta_id]}: {int(h)}h{int(m*60):02d}"
 
-text = "Hours in workshops:"
-for ta_id, hours in sorted(ta_to_hours.items(), key=lambda x: -x[1]):
-    h, m = divmod(hours, 1)
-    text += f"\n- {subcalendar_to_name[ta_id]}: {int(h)}h{int(m*60):02d}"
+    st.write(text)
 
-st.write(text)
+with cols[1]:
+    st.header("Session leads")
+
+    session_leads = defaultdict(int)
+    for event in events:
+        if MEAL_INDICATOR in event.title:
+            continue
+        for lead in event.in_charge():
+            if (
+                lead in subcalendar_to_name.values()
+            ):  # We don't want non-TAs, i.e. participant for meal prep
+                session_leads[lead] += 1
+
+    text = "Sessions led:"
+    for lead, count in sorted(session_leads.items(), key=lambda x: -x[1]):
+        text += f"\n- {lead}: {count}"
+
+    st.write(text)
+
+
+st.header("Workshops with no lead :warning:")
+workshops_with_no_lead = [
+    nice_event(event, day=True)
+    for event in events
+    if (
+        not event.in_charge()
+        and MEAL_INDICATOR not in event.title
+        and participant_calendar_id in event.subcalendar_ids
+        and not event.rrule
+    )
+]
+
+if workshops_with_no_lead:
+    st.write("\n- " + "\n- ".join(workshops_with_no_lead))
 
 
 st.header("Assignments")
@@ -155,15 +200,26 @@ for i, event in enumerate(events):
 
     cols = st.columns(col_spec)
     cols[0].write(
-        f":green[{event.start_datetime.strftime('%H:%M')} - {event.end_datetime.strftime('%H:%M')}] {event.title}"
+        f":green[{event.start_datetime.strftime('%H:%M')} "
+        f"- {event.end_datetime.strftime('%H:%M')}] "
+        f"{event.title} "
+        f"({event.who})"
     )
-    for col, subcalendar_id in zip(cols[1:], subcalendar_to_name.keys()):
+    for col, (subcalendar_id, calendar_name) in zip(cols[1:], subcalendar_to_name.items()):
         if subcalendar_id in event.subcalendar_ids:
-            # emoji
-            if col.button("✅", key=f"{event.id}-{subcalendar_id}-ok"):
-                teamup.toggle_calendar(events, i, subcalendar_id)
-                st.rerun()
+
+            if calendar_name in event.in_charge():
+                # crown
+                if col.button("👑", key=f"{event.id}-{subcalendar_id}-crown"):  # , type="primary"):
+                    teamup.toggle_calendar(events, i, subcalendar_id, False)
+                    teamup.toggle_in_charge(events, i, calendar_name, False)
+                    st.rerun()
+            else:
+                if col.button("✅", key=f"{event.id}-{subcalendar_id}-ok"):
+                    # teamup.toggle_calendar(events, i, subcalendar_id, False)
+                    teamup.toggle_in_charge(events, i, calendar_name, True)
+                    st.rerun()
         else:
             if col.button("❌", key=f"{event.id}-{subcalendar_id}-no"):
-                teamup.toggle_calendar(events, i, subcalendar_id)
+                teamup.toggle_calendar(events, i, subcalendar_id, True)
                 st.rerun()

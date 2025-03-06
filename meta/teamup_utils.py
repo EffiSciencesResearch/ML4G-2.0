@@ -55,6 +55,9 @@ class Event(BaseModel):
     def duration(self):
         return self.end_datetime - self.start_datetime
 
+    def in_charge(self):
+        return [name.strip() for name in self.who.split("&") if name.strip()]
+
 
 class Teamup:
     def __init__(
@@ -94,12 +97,31 @@ class Teamup:
             raise Exception(f"Got {response.status_code} from Teamup")
         return response.json()
 
-    def toggle_calendar(self, events: list[Event], event_idx: int, calendar_id: int):
+    def toggle_calendar(self, events: list[Event], event_idx: int, calendar_id: int, value: bool):
         event = events[event_idx]
-        if calendar_id in event.subcalendar_ids:
-            event.subcalendar_ids.remove(calendar_id)
+
+        ids = set(event.subcalendar_ids)
+        if value:
+            ids.add(calendar_id)
         else:
-            event.subcalendar_ids.append(calendar_id)
+            ids.discard(calendar_id)
+        event.subcalendar_ids = list(ids)
+
+        response = self.put("events", event.id, data=event.model_dump())
+
+        # Update the event in the list
+        events[event_idx] = Event.model_validate(response["event"])
+
+    def toggle_in_charge(self, events: list[Event], event_idx: int, name: str, value: bool):
+        event = events[event_idx]
+
+        who = set(event.in_charge())
+        if value:
+            who.add(name)
+        else:
+            who.discard(name)
+
+        event.who = "&".join(sorted(who))
         response = self.put("events", event.id, data=event.model_dump())
 
         # Update the event in the list
