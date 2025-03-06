@@ -31,7 +31,7 @@ def callback(
 def load_config():
     """Load configuration from a YAML file."""
     try:
-        with open(CONFIG_FILE, "r") as file:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as file:
             return yaml.safe_load(file)
     except Exception:
         return {}
@@ -39,7 +39,7 @@ def load_config():
 
 def save_config(config):
     """Save configuration to a YAML file."""
-    with open(CONFIG_FILE, "w") as file:
+    with open(CONFIG_FILE, "w", encoding="utf-8") as file:
         yaml.safe_dump(config, file)
 
 
@@ -122,7 +122,7 @@ def duplicate_career_docs(
     """
 
     email_to_name = {}
-    with open(names_and_email_file) as csvfile:
+    with open(names_and_email_file, "r", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             email_to_name[row["email"]] = row["name"]

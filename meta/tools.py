@@ -9,9 +9,7 @@ from pathlib import Path
 from subprocess import check_output
 import sys
 from typing import Annotated, Iterator
-import random
 
-from pydantic import BaseModel
 import typer
 from rich import print as rprint
 import black
@@ -63,7 +61,7 @@ def save_notebook(file: Path, notebook: Notebook):
 
 def load_notebook(file: Path) -> Notebook:
     """Load the notebook from the given file."""
-    return json.loads(file.read_text())
+    return json.loads(file.read_text("utf-8"))
 
 
 @dataclass
@@ -92,7 +90,7 @@ def get_all_links(verbose: bool = False) -> Iterator[Link]:
                 rprint(f"🙈 [yellow]Skipped {file}[/]")
             continue
 
-        for line_no, line in enumerate(file.read_text().splitlines()):
+        for line_no, line in enumerate(file.read_text("utf-8").splitlines()):
             for match in RE_URL.finditer(line):
                 url = match.group(1)
                 for ending in [",", ".", '"', "\\n", '\\"']:
@@ -125,7 +123,7 @@ def check_link(link: Link, curl: bool = False) -> str | None:
         try:
             check_output(["curl", "--globoff", "--head", "--silent", link.url])
         except Exception:
-            return f"curl failed"
+            return "curl failed"
 
     return None
 
@@ -419,7 +417,7 @@ def badge(files: list[Path]):
     """
 
     for file in gather_ipynbs(files):
-        notebook = json.loads(file.read_text())
+        notebook = json.loads(file.read_text("utf-8"))
         with_badge = add_badge(file, notebook)
 
         bagdes_count = notebook_to_str(with_badge).count("colab-badge.svg")
@@ -446,7 +444,7 @@ def sync(files: list[Path]):
             new_notebook = fmt_notebook(clean_notebook(add_badge(out_path, new_notebook)))
 
             # Check if there were updates:
-            if out_path.exists() and new_notebook == json.loads(out_path.read_text()):
+            if out_path.exists() and new_notebook == json.loads(out_path.read_text("utf-8")):
                 print(f"✅ {out_path} already up-to-date")
             else:
                 out_path.write_text(notebook_to_str(new_notebook))
@@ -458,7 +456,7 @@ def clean(files: list[Path]):
     """Clean the output and metadata of the notebooks."""
 
     for file in gather_ipynbs(files):
-        notebook = json.loads(file.read_text())
+        notebook = json.loads(file.read_text("utf-8"))
         notebook = clean_notebook(notebook)
         file.write_text(notebook_to_str(notebook))
 
@@ -474,7 +472,7 @@ def list_of_workshops_readme():
     end = "<!-- end workshops -->"
 
     readme = ROOT / "readme.md"
-    content = readme.read_text()
+    content = readme.read_text("utf-8")
 
     start_idx = content.index(start) + len(start)
     end_idx = content.index(end)
@@ -608,7 +606,7 @@ def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
 
     assert file.suffix == ".ipynb", f"{file} is not a notebook"
 
-    notebook = json.loads(file.read_text())
+    notebook = json.loads(file.read_text("utf-8"))
 
     if select_cells:
         cells = []
@@ -686,7 +684,7 @@ def one_on_ones(
     names: Annotated[str, typer.Argument(help="Space or newline separated list of participants.")],
     rounds: int,
     tries: int = 100,
-    preferences: str = None
+    preferences: str = None,
 ):
     """Generate a schedule for one-on-ones for the given names.
 
@@ -732,7 +730,9 @@ def one_on_ones(
         print(person, *matches, sep=",")
 
 
-def make_pairing_graph(names: list[str], rounds: int, forced_pairs: list[tuple[str, str]]) -> dict[str, list[str]]:
+def make_pairing_graph(
+    names: list[str], rounds: int, forced_pairs: list[tuple[str, str]]
+) -> dict[str, list[str]]:
     assert all(name in names for pair in forced_pairs for name in pair)
     assert len(names) == len(set(names)), "Names must be unique"
     assert all(len(pair) == 2 for pair in forced_pairs), "Forced pairs must be pairs"
@@ -745,9 +745,7 @@ def make_pairing_graph(names: list[str], rounds: int, forced_pairs: list[tuple[s
     G.add_edges_from((name, match) for name in names for match in names if name != match)
     G.add_edges_from(forced_pairs, weight=2)
 
-    all_pairings: dict[str, list[str]] = {
-        name: ["-"] * rounds for name in names
-    }
+    all_pairings: dict[str, list[str]] = {name: ["-"] * rounds for name in names}
 
     for round in range(rounds):
         # Get a maximum matching
@@ -760,12 +758,6 @@ def make_pairing_graph(names: list[str], rounds: int, forced_pairs: list[tuple[s
             all_pairings[b][round] = a
 
     return all_pairings
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
