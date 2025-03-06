@@ -5,7 +5,8 @@ from streamlit_utils import State
 
 state = State()
 
-state.auto_login()
+with st.sidebar:
+    state.login_form()
 
 
 camp = get_current_camp()

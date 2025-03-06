@@ -10,6 +10,7 @@ import dotenv
 import streamlit as st
 
 from camp_utils import get_current_camp
+from streamlit_utils import State
 
 
 dotenv.load_dotenv()
@@ -172,6 +173,12 @@ def get_subcalendar_to_name() -> dict[int, str]:
 
 # %%
 st.set_page_config(page_title="TA Assignment", page_icon="📅", layout="wide")
+
+state = State()
+
+with st.sidebar:
+    camp = state.auto_login()
+
 st.markdown(
     """
 # TA Assignment

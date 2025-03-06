@@ -3,7 +3,7 @@ import os
 import streamlit as st
 import dotenv
 
-from camp_utils import list_camps, Camp
+from camp_utils import Camp
 from streamlit_utils import State
 
 dotenv.load_dotenv()
@@ -41,30 +41,9 @@ col_select_camp, col_new_camp = st.columns(2)
 
 with col_select_camp:
     st.header("Select a camp")
-    camps = list_camps()
-    camps.sort(key=lambda c: c.date, reverse=True)
 
-    if not camps:
-        st.warning("No camps found. Please create a camp first.")
-    else:
-
-        with st.container(border=True):
-            camp = st.selectbox("Select camp", camps, format_func=lambda c: c.name)
-            assert camp is not None
-
-            if state.auto_login(camp.name):
-                st.write("You are already logged in this camp.")
-                if st.button("Log out"):
-                    state.logout()
-                    st.success("You were logged out.")
-            else:
-                password = st.text_input("Password", type="password")
-
-                if st.button("Select this one"):
-                    if state.login(camp.name, password):
-                        st.success("You were logged in.")
-                    else:
-                        st.error("Invalid password")
+    with st.container(border=True):
+        state.login_form()
 
 
 with col_new_camp:

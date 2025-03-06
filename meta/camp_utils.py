@@ -50,15 +50,17 @@ class Camp(BaseModel):
     def teamup_admin_calendar_key(self) -> str:
         return PATTERN_TEAMUP_URL.match(self.teamup_admin_url).group(1)
 
+    @staticmethod
+    def list_all():
+        camps = []
+        for file in CAMPS_DIR.glob("*.json"):
+            camp = Camp.model_validate_json(file.read_text("utf-8"))
+            assert (
+                camp.name == file.stem
+            ), f"Camp name {camp.name} does not match file name {file.stem}"
+            camps.append(camp)
 
-def list_camps() -> list[Camp]:
-    camps = []
-    for file in CAMPS_DIR.glob("*.json"):
-        camp = Camp.model_validate_json(file.read_text("utf-8"))
-        assert camp.name == file.stem, f"Camp name {camp.name} does not match file name {file.stem}"
-        camps.append(camp)
-
-    return camps
+        return camps
 
 
 def is_in_streamlit() -> bool:
@@ -70,7 +72,7 @@ def get_current_camp() -> Camp | None:
         return st.session_state.get("current_camp", None)
     else:
         # Take the most recent one
-        camps = list_camps()
+        camps = Camp.list_all()
         if camps:
             return max(camps, key=lambda c: c.date)
         return None

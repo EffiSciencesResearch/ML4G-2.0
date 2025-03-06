@@ -11,25 +11,37 @@ class State:
     CURRENT_CAMP_KEY = "current_camp"
 
     def __init__(self):
-        self.container = st.sidebar.empty()
+        self.container = st.sidebar.container(height=0)
         with self.container:
+            # Hides self.container completely, and extra elements created by SessionStorage
+            st.markdown(
+                """
+<style class="hide-parent">
+    div:has(> div > div > div > div > div > .hide-parent) {
+        display: none;
+    }
+</style>
+""",
+                unsafe_allow_html=True,
+            )
             self._session_storage = SessionStorage()
 
-    def login(self, camp_name: str, password: str) -> bool:
+    def login(self, camp_name: str, password: str) -> Camp | None:
         camp = Camp.load_from_disk(camp_name)
         if camp.password != password:
-            return False
+            return None
 
         st.session_state.current_camp = camp
         self.save_camp_password_in_browser(camp.name, password)
-        return True
+        self.save_camp_in_browser(camp.name)
+        return camp
 
-    def auto_login(self, camp_name: str | None = None) -> bool:
+    def auto_login(self, camp_name: str | None = None) -> Camp | None:
         if camp_name is None:
             # Try to use the last camp from the browser
             camp_name = self.get_last_campname_from_browser()
             if camp_name is None:
-                return False
+                return None
 
         camp = Camp.load_from_disk(camp_name)
         known_passwords = self.get_camp_passwords()
@@ -64,8 +76,50 @@ class State:
 
     def save_camp_in_browser(self, camp: str):
         with self.container:
-            self._session_storage.setItem(self.CURRENT_CAMP_KEY, camp)
+            self._session_storage.setItem(self.CURRENT_CAMP_KEY, camp, key="set-camp")
 
     @property
     def current_camp(self) -> Camp | None:
         return st.session_state.get(self.CURRENT_CAMP_KEY, None)
+
+    # ----
+
+    def login_form(self) -> Camp | None:
+        camps = Camp.list_all()
+        camps.sort(key=lambda c: c.date, reverse=True)
+
+        if not camps:
+            st.warning("No camps found. Please create a camp first.")
+            return None
+
+        default_camp = self.get_last_campname_from_browser()
+        default_camp_idx = next((i for i, c in enumerate(camps) if c.name == default_camp), 0)
+        camp: Camp = st.selectbox(
+            "Select camp",
+            camps,
+            format_func=lambda c: c.name,
+            index=default_camp_idx,
+        )
+        assert camp is not None
+
+        if self.auto_login(camp.name):
+            st.write(f"You are logged in for `{camp.name}`.")
+            if st.button("Log out", on_click=self.logout):
+                st.toast("You were logged out.")
+                return None
+            return camp
+
+        password = st.text_input(
+            "Password",
+            type="password",
+        )
+
+        if not password:
+            return None
+
+        if self.login(camp.name, password):
+            st.success("You were logged in.")
+            return camp
+        else:
+            st.error("Invalid password")
+            return None
