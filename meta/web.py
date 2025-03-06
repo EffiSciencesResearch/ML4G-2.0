@@ -46,28 +46,30 @@ with col_select_camp:
 
     if not camps:
         st.warning("No camps found. Please create a camp first.")
-        st.stop()
+    else:
 
-    with st.container(border=True):
-        sorted_camps = sorted(camps, key=lambda c: camps[c].date, reverse=True)
-        camp_file = st.selectbox("Select camp", sorted_camps, format_func=lambda c: camps[c].name)
-        camp = camps[camp_file]
+        with st.container(border=True):
+            sorted_camps = sorted(camps, key=lambda c: camps[c].date, reverse=True)
+            camp_file = st.selectbox(
+                "Select camp", sorted_camps, format_func=lambda c: camps[c].name
+            )
+            camp = camps[camp_file]
 
-        if state.auto_login(camp_file):
-            st.write("You are already logged in this camp.")
-            if st.button("Log out"):
-                state.logout()
-                st.success("You were logged out.")
-                st.rerun()
-        else:
-            password = st.text_input("Password", type="password")
-
-            if st.button("Select this one"):
-                if state.login(camp_file, password):
-                    st.error("Invalid password")
-                else:
-                    st.success("You were logged in.")
+            if state.auto_login(camp_file):
+                st.write("You are already logged in this camp.")
+                if st.button("Log out"):
+                    state.logout()
+                    st.success("You were logged out.")
                     st.rerun()
+            else:
+                password = st.text_input("Password", type="password")
+
+                if st.button("Select this one"):
+                    if state.login(camp_file, password):
+                        st.error("Invalid password")
+                    else:
+                        st.success("You were logged in.")
+                        st.rerun()
 
 
 with col_new_camp:
