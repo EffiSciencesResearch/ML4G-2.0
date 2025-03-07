@@ -1,15 +1,12 @@
 # %%
 from collections import defaultdict
-from datetime import datetime, timedelta
 import dotenv
 
 import streamlit as st
 
 from camp_utils import get_current_camp
 from streamlit_utils import State
-from teamup_utils import Teamup, Event
-
-MEAL_INDICATOR = "🥘"
+from teamup_utils import Teamup, Event, MEAL_INDICATOR
 
 dotenv.load_dotenv()
 camp = get_current_camp()
@@ -17,6 +14,9 @@ teamup = Teamup(camp)
 
 
 # %%
+# All of those are here to cache the data, so that we don't query at every script rerun.
+# But the main logic is in the teamup class, which doesn't use any of streamlit, so it's easier to
+# test and debug.
 @st.cache_data()
 def get_or_make_participants_key():
     return teamup.get_or_make_participants_key()
@@ -27,24 +27,14 @@ def get_or_make_modifier_key():
     return teamup.get_or_make_modifier_key()
 
 
-@st.cache_resource()
+@st.cache_resource()  # to modify it when we edit.
 def get_events():
-    today = datetime.now()
-    next_year = today + timedelta(days=365)
-
-    query = {
-        "startDate": today.strftime("%Y-%m-%d"),
-        "endDate": next_year.strftime("%Y-%m-%d"),
-    }
-
-    events = teamup.get("events", **query)
-    return [Event.model_validate(e) for e in events["events"]]
+    return teamup.get_events()
 
 
 @st.cache_data()
 def get_subcalendar_to_name() -> dict[int, str]:
-    subcalendars = teamup.get("subcalendars")["subcalendars"]
-    return {sc["id"]: sc["name"] for sc in subcalendars}
+    return teamup.get_subcalendar_to_name()
 
 
 def nice_event(event: Event, day: bool = False) -> str:

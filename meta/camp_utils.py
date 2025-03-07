@@ -1,3 +1,4 @@
+import datetime
 from pathlib import Path
 import re
 import string
@@ -49,6 +50,10 @@ class Camp(BaseModel):
     @property
     def teamup_admin_calendar_key(self) -> str:
         return PATTERN_TEAMUP_URL.match(self.teamup_admin_url).group(1)
+
+    @property
+    def start_datetime(self):
+        return datetime.datetime.fromisoformat(self.date)
 
     @staticmethod
     def list_all():

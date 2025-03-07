@@ -3,9 +3,8 @@ import os
 from pydantic import BaseModel
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import dotenv
-
 
 from camp_utils import Camp
 
@@ -13,6 +12,7 @@ dotenv.load_dotenv()
 
 PARTICIPANTS_CALENDAR_NAME = "Participants"
 BASE_API_URL = "https://api.teamup.com"
+MEAL_INDICATOR = "🥘"
 
 
 class Event(BaseModel):
@@ -97,6 +97,18 @@ class Teamup:
             raise Exception(f"Got {response.status_code} from Teamup")
         return response.json()
 
+    def get_events(self) -> list[Event]:
+        start = self.camp.start_datetime - timedelta(days=10)
+        end = self.camp.start_datetime + timedelta(days=20)
+
+        query = {
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+        }
+
+        events = self.get("events", **query)
+        return [Event.model_validate(e) for e in events["events"]]
+
     def toggle_calendar(self, events: list[Event], event_idx: int, calendar_id: int, value: bool):
         event = events[event_idx]
 
@@ -165,3 +177,7 @@ class Teamup:
         }
 
         return self.get_or_make_key(desired_data, "Read access for participants")
+
+    def get_subcalendar_to_name(self) -> dict[int, str]:
+        subcalendars = self.get("subcalendars")["subcalendars"]
+        return {sc["id"]: sc["name"] for sc in subcalendars}
