@@ -41,6 +41,7 @@ dependencies = [
     "streamlit>=1.42.2",
     "python-dotenv>=1.0.1",
     "streamlit-browser-session-storage>=0.0.12",
+    "streamlit-pills>=0.3.0",
 ]
 
 [dependency-groups]
