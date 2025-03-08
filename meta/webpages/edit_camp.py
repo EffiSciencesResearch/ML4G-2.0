@@ -17,7 +17,6 @@ if not camp:
 st.write(f"## Currently editing camp `{camp.name}`")
 
 with st.form("camp-edit", border=False):
-    name = st.text_input("Name", value=camp.name)
     date = st.date_input("Date", value=datetime.datetime.fromisoformat(camp.date))
 
     st.write(
@@ -47,7 +46,6 @@ with st.form("camp-edit", border=False):
 
     if st.form_submit_button("Save"):
         new_data = dict(
-            name=name,
             date=date.isoformat(),
             teamup_admin_url=teamup_admin_url,
             participants_name_and_email_csv=participants,
@@ -55,4 +53,4 @@ with st.form("camp-edit", border=False):
 
         # Remove newdata that is None
         new_data = {k: v for k, v in new_data.items() if v not in (None, "")}
-        edit_current_camp(new_data)
+        edit_current_camp(**new_data)
