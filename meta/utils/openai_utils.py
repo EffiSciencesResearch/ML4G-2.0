@@ -38,11 +38,14 @@ class ServiceAccount(BaseModel):
         return cls(id=data["id"], api_key=data["api_key"]["value"])
 
     def delete(self):
-        # Delete https://api.openai.com/v1/organization/service_accounts/{account_id}
+        # Delete https://api.openai.com/v1/organization/projects/{project_id}/service_accounts/{service_account_id}
         assert admin_key, "Please set OPENAI_ADMIN_KEY with an administrator (not API!) key"
+        assert (
+            project_id
+        ), "Please set OPENAI_CAMPS_PROJECT_ID to the project in which to create the account"
 
         response = requests.delete(
-            f"https://api.openai.com/v1/organization/service_accounts/{self.id}",
+            f"https://api.openai.com/v1/organization/projects/{project_id}/service_accounts/{self.id}",
             headers={
                 "Authorization": f"Bearer {admin_key}",
             },

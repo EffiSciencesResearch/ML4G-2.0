@@ -49,11 +49,11 @@ if camp.openai_camp_service_account is None:
     st.button("Create OpenAI API key", on_click=new_openai_service_account)
 else:
 
-    def delete_service_account(self):
-        self.openai_camp_service_account.delete()
+    def delete_service_account():
+        camp.openai_camp_service_account.delete()
         edit_current_camp(openai_camp_service_account=None)
 
-    st.write(f"API key: `{camp.camp_openai_key}`")
+    st.write(f"API key:\n```\n{camp.openai_camp_service_account.api_key}\n```")
     st.button("Revoke OpenAI API key", on_click=delete_service_account)
 
 
