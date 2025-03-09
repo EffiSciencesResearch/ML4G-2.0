@@ -40,6 +40,9 @@ st.subheader("OpenAI API keys")
 st.write(
     "We use an API key for some of the notebooks in the camp. "
     "You can create one here, and don't forget to revoke it after the camp. "
+    "\n\n"
+    "Current **hard usage limits** are at 20$/month, but usage should generally be lower. "
+    "If more is needed, contact Diego or Nia."
 )
 if camp.openai_camp_service_account is None:
 
