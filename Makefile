@@ -10,6 +10,7 @@ deploy:
 
 	@echo "Deploying to $(DEPLOY_HOST):$(DEPLOY_PATH)"
 	git ls-files | rsync -azP --files-from=- . $(DEPLOY_HOST):$(DEPLOY_PATH)
+	scp .env-prod $(DEPLOY_HOST):$(DEPLOY_PATH)/.env
 	ssh $(DEPLOY_HOST) "systemctl restart ml4g-web"
 
 run:
