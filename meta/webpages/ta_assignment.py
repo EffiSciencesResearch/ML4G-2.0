@@ -4,9 +4,9 @@ import dotenv
 
 import streamlit as st
 
-from camp_utils import get_current_camp
-from streamlit_utils import State
-from teamup_utils import Teamup, Event, MEAL_INDICATOR
+from utils.camp_utils import get_current_camp
+from utils.streamlit_utils import State
+from utils.teamup_utils import Teamup, Event, MEAL_INDICATOR
 
 dotenv.load_dotenv()
 camp = get_current_camp()

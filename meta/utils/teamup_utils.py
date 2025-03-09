@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta
 import dotenv
 
-from camp_utils import Camp
+from utils.camp_utils import Camp
 
 dotenv.load_dotenv()
 

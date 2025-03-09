@@ -8,18 +8,21 @@ import random
 import streamlit as st
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
-CAMPS_DIR = Path(__file__).parent / "camps"
+from utils.openai_utils import ServiceAccount
+
+CAMPS_DIR = Path(__file__).parent.parent / "camps"
 
 PATTERN_TEAMUP_URL = re.compile("https://teamup.com/([a-z0-9]+)")
 
 
 class Camp(BaseModel):
-    # If you add a new field here, remember to add it to edit_camp.py too.
     name: str
     password: str
     date: str
     teamup_admin_url: str | None = None
     participants_name_and_email_csv: str = "name,email\n"
+    openai_camp_service_account: ServiceAccount | None = None
+    # If you add a new field here, remember to add it to edit_camp.py too.
 
     @classmethod
     def new(cls, name: str, date: str) -> "Camp":

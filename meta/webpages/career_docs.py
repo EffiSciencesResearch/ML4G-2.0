@@ -1,8 +1,8 @@
 import csv
 from pathlib import Path
 import streamlit as st
-from camp_utils import get_current_camp
-from google_utils import extract_id_from_url, SimpleGoogleAPI
+from utils.camp_utils import get_current_camp
+from utils.google_utils import extract_id_from_url, SimpleGoogleAPI
 
 
 camp = get_current_camp()

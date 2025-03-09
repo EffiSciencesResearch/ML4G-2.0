@@ -3,7 +3,7 @@ import json
 import streamlit as st
 from streamlit_session_browser_storage import SessionStorage
 
-from camp_utils import Camp
+from utils.camp_utils import Camp
 
 
 class State:

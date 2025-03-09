@@ -4,8 +4,8 @@ import streamlit as st
 import dotenv
 from streamlit_pills import pills as st_pills
 
-from streamlit_utils import State
-from teamup_utils import Teamup, MEAL_INDICATOR
+from utils.streamlit_utils import State
+from utils.teamup_utils import Teamup, MEAL_INDICATOR
 
 dotenv.load_dotenv()
 

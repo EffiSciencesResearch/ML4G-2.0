@@ -7,7 +7,7 @@ import yaml
 import typer
 from pathlib import Path
 
-from google_utils import extract_id_from_url, SimpleGoogleAPI
+from utils.google_utils import extract_id_from_url, SimpleGoogleAPI
 from InquirerPy import inquirer
 
 
