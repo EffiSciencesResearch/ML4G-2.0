@@ -1938,7 +1938,7 @@ dependencies = [
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "streamlit" },
-    { name = "streamlit-browser-session-storage" },
+    { name = "streamlit-local-storage" },
     { name = "streamlit-pills" },
     { name = "toml" },
     { name = "torch" },
@@ -1986,7 +1986,7 @@ requires-dist = [
     { name = "rich" },
     { name = "scikit-learn" },
     { name = "streamlit", specifier = ">=1.42.2" },
-    { name = "streamlit-browser-session-storage", specifier = ">=0.0.12" },
+    { name = "streamlit-local-storage", specifier = ">=0.0.25" },
     { name = "streamlit-pills", specifier = ">=0.3.0" },
     { name = "toml" },
     { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
@@ -3617,15 +3617,15 @@ wheels = [
 ]
 
 [[package]]
-name = "streamlit-browser-session-storage"
-version = "0.0.12"
+name = "streamlit-local-storage"
+version = "0.0.25"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "streamlit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d5/32/c2198eb437154469366ffbe908810558ea91be96c2653d29ae6a8ea3dfd9/streamlit_browser_session_storage-0.0.12.tar.gz", hash = "sha256:20a2cd38698fa1900eb4d7086576319a8dda6b577f199142d954cdb56e2331fc", size = 536633 }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/ad/5e92a9355c2f32c162f0e2a2262b90697385edf0fe64bc66a27eb652ac95/streamlit_local_storage-0.0.25.tar.gz", hash = "sha256:9b7c3e8ae7c14a68b47c980b167306181292213736dfa71850c8d3204dc2a9cd", size = 538392 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6d/d7/c76a401fb0ffcb9414203e7ead5eff6bf6d7cea1b38a1cb09bb448275e8e/streamlit_browser_session_storage-0.0.12-py3-none-any.whl", hash = "sha256:c0ed256b505592113978e99e53e4ed2d158d9e64013a758f6b36153b7309c358", size = 543423 },
+    { url = "https://files.pythonhosted.org/packages/7b/a6/502b00b6db10c3d467ec57d822d6647a35f0328ef03668aa5b6dd160f966/streamlit_local_storage-0.0.25-py3-none-any.whl", hash = "sha256:0ef85618ed8c44f347b7acffb2d104da5b6915e6a4e24612f12a4d2cc355b951", size = 543746 },
 ]
 
 [[package]]

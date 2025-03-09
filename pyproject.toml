@@ -40,8 +40,8 @@ dependencies = [
     "google-auth-httplib2",
     "streamlit>=1.42.2",
     "python-dotenv>=1.0.1",
-    "streamlit-browser-session-storage>=0.0.12",
     "streamlit-pills>=0.3.0",
+    "streamlit-local-storage>=0.0.25",
 ]
 
 [dependency-groups]

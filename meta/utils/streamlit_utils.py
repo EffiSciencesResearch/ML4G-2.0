@@ -1,7 +1,7 @@
 import json
 
 import streamlit as st
-from streamlit_session_browser_storage import SessionStorage
+from streamlit_local_storage import LocalStorage
 
 from utils.camp_utils import Camp
 
@@ -24,7 +24,7 @@ class State:
 """,
                 unsafe_allow_html=True,
             )
-            self._session_storage = SessionStorage()
+            self._browser_local_storage = LocalStorage()
 
     def login(self, camp_name: str, password: str, save_to_browser: bool = True) -> Camp | None:
         camp = Camp.load_from_disk(camp_name)
@@ -51,7 +51,7 @@ class State:
     def logout(self):
         st.session_state.pop("current_camp", None)
         with self.container:
-            self._session_storage.deleteItem(self.CAMP_PASSWORDS_KEY)
+            self._browser_local_storage.deleteItem(self.CAMP_PASSWORDS_KEY)
             # self._session_storage.deleteItem(self.CURRENT_CAMP_KEY)  # not needed
 
     def select_camp(self, name: str):
@@ -60,24 +60,24 @@ class State:
         self.save_camp_in_browser(camp.name)
 
     def get_camp_passwords(self) -> dict[str, str]:
-        data = self._session_storage.getItem(self.CAMP_PASSWORDS_KEY)
+        data = self._browser_local_storage.getItem(self.CAMP_PASSWORDS_KEY)
         try:
             return json.loads(data)
         except (json.JSONDecodeError, TypeError):
             return {}
 
     def get_last_campname_from_browser(self) -> str | None:
-        return self._session_storage.getItem(self.CURRENT_CAMP_KEY)
+        return self._browser_local_storage.getItem(self.CURRENT_CAMP_KEY)
 
     def save_camp_password_in_browser(self, name: str, password: str):
         passwords = self.get_camp_passwords()
         passwords[name] = password
         with self.container:
-            self._session_storage.setItem(self.CAMP_PASSWORDS_KEY, json.dumps(passwords))
+            self._browser_local_storage.setItem(self.CAMP_PASSWORDS_KEY, json.dumps(passwords))
 
     def save_camp_in_browser(self, camp: str):
         with self.container:
-            self._session_storage.setItem(self.CURRENT_CAMP_KEY, camp, key="set-camp")
+            self._browser_local_storage.setItem(self.CURRENT_CAMP_KEY, camp, key="set-camp")
 
     @property
     def current_camp(self) -> Camp | None:
