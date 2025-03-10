@@ -21,7 +21,7 @@ Rules:
 - If "Handle TAs separately" is checked
     - Participants will meet with TAs only when all other participants have met with a TA as much as them
     - TAs will not be paired with each other
-- Preferences can be added to ensure a pair can meet early. However if TAs are handled separately,
+- Preferences can be added to ensure a pair can meet early, or never meets.
 """
 )
 
@@ -56,13 +56,6 @@ with participant_col:
 
 rounds = st.slider(
     "Number of rounds of 1-1s", min_value=1, max_value=len(names) - 1, value=len(names) * 2 // 3
-)
-tries = st.number_input(
-    "Maximum tries",
-    min_value=1,
-    max_value=1000,
-    value=1000,
-    help="Number of attempts to find a valid schedule",
 )
 
 prefer_col, against_col = st.columns(2)
@@ -129,6 +122,7 @@ if st.button("Try to generate schedule"):
 
     # Try to generate the schedule
 
+    tries = 1000
     with st.spinner(f"Generating schedule (up to {tries} attempts)..."):
         for i in range(tries):
             try:

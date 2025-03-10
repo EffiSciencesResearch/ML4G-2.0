@@ -813,9 +813,13 @@ def make_pairing_graph(
 
             for meet in ta_group:
                 if name != "-" and G.has_edge(name, meet):
-                    G[name][meet]["weight"] = (
-                        ta_group_weight if meets_from_group[name] < max_meet_number else 1
+                    default_edge_weight = preferences.get(
+                        (name, meet), preferences.get((meet, name))
                     )
+                    if default_edge_weight is None:
+                        G[name][meet]["weight"] = (
+                            ta_group_weight if meets_from_group[name] < max_meet_number else 1
+                        )
 
         # Get a maximum matching
         matching: set[tuple[str, str]] = nx.max_weight_matching(G)
