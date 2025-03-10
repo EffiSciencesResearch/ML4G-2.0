@@ -63,10 +63,22 @@ st.sidebar.button("Refresh calendar", on_click=get_events.clear)
 
 subcalendar_to_name = get_subcalendar_to_name()
 
+try:
+    default_index = list(subcalendar_to_name.values()).index(
+        state.per_browser_settings.dashboard_name
+    )
+except ValueError:
+    default_index = 0
+
 current_user = st_pills(
-    "View dashboard as", list(subcalendar_to_name), format_func=lambda x: subcalendar_to_name[x]
+    "View dashboard as",
+    list(subcalendar_to_name),
+    format_func=lambda x: subcalendar_to_name[x],
+    index=default_index,
+    key="dashboard_name",
 )
 current_user_name = subcalendar_to_name[current_user]
+state.save_settings(dashboard_name=current_user_name)
 
 hide_meals = st.sidebar.checkbox(f"Hide meals ({MEAL_INDICATOR})", value=True)
 
