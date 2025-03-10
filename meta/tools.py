@@ -715,9 +715,11 @@ def one_on_ones(
         else:
             preferences_list = [line.split(",") for line in preferences.split()]
 
+        preferences_dict = {tuple(pref): 2 for pref in preferences_list}
+
     for i in range(tries):
         try:
-            all_pairings = make_pairing_graph(name_list, rounds, preferences_list)
+            all_pairings = make_pairing_graph(name_list, rounds, preferences_dict)
             print(f"Found a solution after {i+1} tries.", file=sys.stderr)
             break
         except KeyError:
@@ -731,23 +733,90 @@ def one_on_ones(
 
 
 def make_pairing_graph(
-    names: list[str], rounds: int, forced_pairs: list[tuple[str, str]]
+    # names: list[str], rounds: int, forced_pairs: list[tuple[str, str]]
+    names: list[str],
+    rounds: int,
+    preferences: dict[tuple[str, str], int],
+    ta_group: set[str],
+    ta_group_weight: int = 2,
 ) -> dict[str, list[str]]:
-    assert all(name in names for pair in forced_pairs for name in pair)
+    """
+    Generate a pairing schedule for a given list of names over a specified number of rounds,
+    taking into account preferences and a special group of names (TA group).
+
+    Args:
+        names (list[str]): A list of unique names to be paired.
+        rounds (int): The number of rounds for which the pairings should be generated.
+        preferences (dict[tuple[str, str], int]): A dictionary where keys are tuples of names
+            representing pairs, and values are integers representing the weight of the preference
+            for that pair. A weight of 0 means the pair should not be matched.
+        ta_group (set[str]): A set of names that belong to a special group (TA group).
+            These names have special pairing rules.
+        ta_group_weight (int, optional): The weight to be assigned to edges between names in the
+            TA group and other names. Defaults to 2.
+
+    Returns:
+        dict[str, list[str]]: A dictionary where keys are names and values are lists of names
+            representing the pairings for each round. Each list has a length equal to the number
+            of rounds, and the ith element in the list is the name of the person paired with the
+            key name in the ith round.
+
+    Raises:
+        AssertionError: If any of the following conditions are not met:
+            - All names in the preference pairs are in the names list.
+            - All names in the names list are unique.
+            - All preference pairs are of length 2.
+            - All names in the TA group are in the names list.
+
+    Special Rules:
+    - TA Group: Names in the `ta_group` have special pairing rules.
+        People outside of the TA group will meet with a member of the group only when everyone
+        else has met with the group as many times as them.
+        Members of the TA group cannot meet between themselves.
+    - If the number of names is odd, a dummy name "-" is added to the list of names.
+        And we rotate who is not paired with anyone.
+    """
+
+    assert all(name in names for pair in preferences.keys() for name in pair)
     assert len(names) == len(set(names)), "Names must be unique"
-    assert all(len(pair) == 2 for pair in forced_pairs), "Forced pairs must be pairs"
+    assert all(len(pair) == 2 for pair in preferences.keys()), "Preference pairs must be pairs"
+    assert all(name in names for name in ta_group), "TA names must be in the names list"
 
     import networkx as nx
+
+    meets_from_group = {name: 0 for name in names}
+    if len(names) % 2 == 1:
+        names.append("-")
 
     G = nx.Graph()
     G.add_nodes_from(names)
     # We make a complete graph
     G.add_edges_from((name, match) for name in names for match in names if name != match)
-    G.add_edges_from(forced_pairs, weight=2)
+    # We remove or update edges based on preferences
+    for (a, b), weight in preferences.items():
+        if weight == 0:
+            G.remove_edge(a, b)
+        else:
+            G[a][b]["weight"] = weight
+    # Remove edges between members of the TA group
+    G.remove_edges_from((a, b) for a in ta_group for b in ta_group if a != b)
 
     all_pairings: dict[str, list[str]] = {name: ["-"] * rounds for name in names}
 
     for round in range(rounds):
+        # Adapt the weight of edges between non-meet group members to meetgroup
+        # They should meet with the group iff everyone else as met as much as them with the group
+        max_meet_number = max(meets_from_group.values())
+        for name in names:
+            if name in ta_group:
+                continue
+
+            for meet in ta_group:
+                if name != "-" and G.has_edge(name, meet):
+                    G[name][meet]["weight"] = (
+                        ta_group_weight if meets_from_group[name] < max_meet_number else 1
+                    )
+
         # Get a maximum matching
         matching: set[tuple[str, str]] = nx.max_weight_matching(G)
         # Remove the edges in the matching
@@ -757,6 +826,13 @@ def make_pairing_graph(
             all_pairings[a][round] = b
             all_pairings[b][round] = a
 
+            # Update the number of meetings with the group
+            if a in ta_group:
+                meets_from_group[b] += 1
+            elif b in ta_group:
+                meets_from_group[a] += 1
+
+    all_pairings.pop("-", None)
     return all_pairings
 
 

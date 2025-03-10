@@ -1,3 +1,4 @@
+import csv
 import datetime
 from pathlib import Path
 import re
@@ -69,6 +70,10 @@ class Camp(BaseModel):
             camps.append(camp)
 
         return camps
+
+    def participants_list(self) -> list[str]:
+        reader = csv.DictReader(self.participants_name_and_email_csv.splitlines())
+        return list(row["name"] for row in reader)
 
 
 def is_in_streamlit() -> bool:
