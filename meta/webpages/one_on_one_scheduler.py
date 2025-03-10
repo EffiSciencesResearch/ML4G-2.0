@@ -65,37 +65,55 @@ tries = st.number_input(
     help="Number of attempts to find a valid schedule",
 )
 
-preferences_text = st.text_area(
-    'Optional Preferences (pairs "name1,name2")',
-    help="Format: person1,person2 (one per line). Each preference means person1 prefers to be paired with person2",
-)
+prefer_col, against_col = st.columns(2)
 
+with prefer_col:
+    preferences_text = st.text_area(
+        'Optional Preferences (pairs "name1,name2")',
+        help="Format: person1,person2 (one per line). Each preference means person1 prefers to be paired with person2",
+        height=300,
+    )
+
+with against_col:
+    against_text = st.text_area(
+        'Pairs not to match (pairs "name1,name2")',
+        help="Format: person1,person2 (one per line). Each pair will not be matched",
+        height=300,
+    )
 
 names = names + tas
 
-# Parse preferences
-preferences = {}
-for pref in preferences_text.splitlines():
-    pref = pref.strip()
-    if not pref:
-        continue
 
-    if len(pref.split(",")) != 2:
+# Parse preferences
+def is_valid_pair_line(line: str) -> tuple[str, str] | tuple[None, None]:
+    pair = line.strip()
+    if not pair:
+        return None, None
+
+    if len(pair.split(",")) != 2:
         st.error(
-            f"Invalid preference format: {pref}. Each preference should be in the format 'person1,person2'."
+            f"Invalid pair format: {pair}. Each pair should be in the format 'person1,person2'."
         )
         st.stop()
 
-    p1, p2 = pref.split(",")
+    p1, p2 = pair.split(",")
     if p1 not in names or p2 not in names:
-        st.error(f"Preference {p1},{p2} contains names not in the participants list.")
+        st.error(f"Pair {p1},{p2} contains names not in the participants list.")
         st.stop()
 
-    preferences[p1, p2] = 2
+    return p1, p2
 
-for (p1, p2), w in preferences.items():
-    st.write(p1, p2, w)
 
+preferences = {}
+for pref in preferences_text.splitlines():
+    p1, p2 = is_valid_pair_line(pref)
+    if p1 is not None:
+        preferences[p1, p2] = 2
+
+for against in against_text.splitlines():
+    p1, p2 = is_valid_pair_line(against)
+    if p1 is not None:
+        preferences[p1, p2] = 0
 
 # Processing and results display
 if st.button("Try to generate schedule"):
