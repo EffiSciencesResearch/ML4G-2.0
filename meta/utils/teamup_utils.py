@@ -109,9 +109,11 @@ class Teamup:
         events = self.get("events", **query)
         return [Event.model_validate(e) for e in events["events"]]
 
-    def toggle_calendar(self, events: list[Event], event_idx: int, calendar_id: int, value: bool):
-        event = events[event_idx]
+    def edit_event(self, event: Event) -> Event:
+        response = self.put("events", event.id, data=event.model_dump())
+        return Event.model_validate(response["event"])
 
+    def toggle_calendar(self, event: Event, calendar_id: int, value: bool) -> Event:
         ids = set(event.subcalendar_ids)
         if value:
             ids.add(calendar_id)
@@ -119,14 +121,9 @@ class Teamup:
             ids.discard(calendar_id)
         event.subcalendar_ids = list(ids)
 
-        response = self.put("events", event.id, data=event.model_dump())
+        return self.edit_event(event)
 
-        # Update the event in the list
-        events[event_idx] = Event.model_validate(response["event"])
-
-    def toggle_in_charge(self, events: list[Event], event_idx: int, name: str, value: bool):
-        event = events[event_idx]
-
+    def toggle_in_charge(self, event: Event, name: str, value: bool) -> Event:
         who = set(event.in_charge())
         if value:
             who.add(name)
@@ -134,10 +131,7 @@ class Teamup:
             who.discard(name)
 
         event.who = "&".join(sorted(who))
-        response = self.put("events", event.id, data=event.model_dump())
-
-        # Update the event in the list
-        events[event_idx] = Event.model_validate(response["event"])
+        return self.edit_event(event)
 
     def get_or_make_key(self, desired_data: dict, name: str) -> str:
         keys = self.get("keys")

@@ -201,15 +201,14 @@ for i, event in enumerate(events):
             if calendar_name in event.in_charge():
                 # crown
                 if col.button("👑", key=f"{event.id}-{subcalendar_id}-crown"):  # , type="primary"):
-                    teamup.toggle_calendar(events, i, subcalendar_id, False)
-                    teamup.toggle_in_charge(events, i, calendar_name, False)
+                    events[i] = teamup.toggle_calendar(events[i], subcalendar_id, False)
+                    events[i] = teamup.toggle_in_charge(events[i], calendar_name, False)
                     st.rerun()
             else:
                 if col.button("✅", key=f"{event.id}-{subcalendar_id}-ok"):
-                    # teamup.toggle_calendar(events, i, subcalendar_id, False)
-                    teamup.toggle_in_charge(events, i, calendar_name, True)
+                    events[i] = teamup.toggle_in_charge(events[i], calendar_name, True)
                     st.rerun()
         else:
             if col.button("❌", key=f"{event.id}-{subcalendar_id}-no"):
-                teamup.toggle_calendar(events, i, subcalendar_id, True)
+                events[i] = teamup.toggle_calendar(events[i], subcalendar_id, True)
                 st.rerun()
