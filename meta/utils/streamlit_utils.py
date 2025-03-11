@@ -12,6 +12,9 @@ class PerBrowserSettings(BaseModel):
     current_camp: str | None = None
     dashboard_name: str | None = None
 
+    class Config:
+        frozen = True
+
 
 class State:
 
@@ -55,9 +58,10 @@ class State:
 
         st.session_state.current_camp = camp
         if save_to_browser:
-            self.per_browser_settings.current_camp = camp.name
-            self.per_browser_settings.camp_passwords[camp.name] = password
-            self.save_settings()
+            self.save_settings(
+                current_camp=camp.name,
+                camp_passwords={**self.per_browser_settings.camp_passwords, camp.name: password},
+            )
         return camp
 
     def auto_login(self, camp_name: str | None = None) -> Camp | None:
