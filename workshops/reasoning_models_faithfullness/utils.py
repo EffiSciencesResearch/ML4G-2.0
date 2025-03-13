@@ -3,6 +3,29 @@ import json
 from pathlib import Path
 import os
 import re  
+from typing import List, Dict, Any, Optional, Union
+
+def load_existing_results(output_file: str) -> List[Dict[str, Any]]:
+    """
+    Load existing results from a file if it exists.
+    
+    Args:
+        output_file: Path to the results file
+    
+    Returns:
+        list: Existing results or empty list if file doesn't exist
+    """
+    existing_results: List[Dict[str, Any]] = []
+    file_path = Path("results", output_file)
+    
+    if file_path.exists():
+        with open(file_path, 'r') as f:
+            existing_results = json.load(f)
+        print(f"Loaded {len(existing_results)} existing results from {file_path}")
+    else:
+        print(f"No existing results found at {file_path}")
+    
+    return existing_results
 
 def load_mmlu_data(category, split="test"):
     """Load MMLU data from Hugging Face datasets with question IDs"""
