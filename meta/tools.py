@@ -354,6 +354,13 @@ def fmt_notebook(notebook: Notebook) -> Notebook:
         return notebook
 
 
+def notebook_matches_file(notebook: Notebook, file: Path) -> bool:
+    try:
+        return notebook == load_notebook(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
+
+
 # ------------------------------
 # CLI commands
 # ------------------------------
@@ -417,7 +424,7 @@ def badge(files: list[Path]):
     """
 
     for file in gather_ipynbs(files):
-        notebook = json.loads(file.read_text("utf-8"))
+        notebook = load_notebook(file)
         with_badge = add_badge(file, notebook)
 
         bagdes_count = notebook_to_str(with_badge).count("colab-badge.svg")
@@ -444,7 +451,7 @@ def sync(files: list[Path]):
             new_notebook = fmt_notebook(clean_notebook(add_badge(out_path, new_notebook)))
 
             # Check if there were updates:
-            if out_path.exists() and new_notebook == json.loads(out_path.read_text("utf-8")):
+            if notebook_matches_file(new_notebook, out_path):
                 print(f"✅ {out_path} already up-to-date")
             else:
                 out_path.write_text(notebook_to_str(new_notebook))
@@ -456,7 +463,7 @@ def clean(files: list[Path]):
     """Clean the output and metadata of the notebooks."""
 
     for file in gather_ipynbs(files):
-        notebook = json.loads(file.read_text("utf-8"))
+        notebook = load_notebook(file)
         notebook = clean_notebook(notebook)
         file.write_text(notebook_to_str(notebook))
 
@@ -606,7 +613,7 @@ def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
 
     assert file.suffix == ".ipynb", f"{file} is not a notebook"
 
-    notebook = json.loads(file.read_text("utf-8"))
+    notebook = load_notebook(file)
 
     if select_cells:
         cells = []
