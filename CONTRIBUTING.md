@@ -25,7 +25,6 @@ pre-commit install
 ```
 
 #### Windows setup
-(equivalent according to GPT4)
 ```cmd
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
