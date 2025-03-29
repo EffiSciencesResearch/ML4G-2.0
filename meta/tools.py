@@ -56,7 +56,7 @@ def notebook_to_str(notebook: Notebook) -> str:
 
 def save_notebook(file: Path, notebook: Notebook):
     """Save the notebook to the given file."""
-    file.write_text(notebook_to_str(notebook))
+    file.write_text(notebook_to_str(notebook), encoding='utf-8')
 
 
 def load_notebook(file: Path) -> Notebook:
@@ -392,7 +392,7 @@ def neat(files: list[Path], clean: bool = True, badge: bool = True, fmt: bool = 
         if notebook == initial:
             print(f"🌟 {file} already neat")
         else:
-            file.write_text(notebook_to_str(notebook))
+            file.write_text(notebook_to_str(notebook), encoding='utf-8')
 
 
 @app.command()
@@ -436,7 +436,7 @@ def badge(files: list[Path]):
         if notebook == with_badge:
             print(f"✅ {file} already has a badge.{details}")
         else:
-            file.write_text(notebook_to_str(with_badge))
+            file.write_text(notebook_to_str(with_badge), encoding='utf-8')
             print(f"🖊  {file} now has a badge!{details}")
 
 
@@ -454,7 +454,7 @@ def sync(files: list[Path]):
             if notebook_matches_file(new_notebook, out_path):
                 print(f"✅ {out_path} already up-to-date")
             else:
-                out_path.write_text(notebook_to_str(new_notebook))
+                out_path.write_text(notebook_to_str(new_notebook), encoding='utf-8')
                 print(f"📝 {out_path} generated")
 
 
@@ -465,7 +465,7 @@ def clean(files: list[Path]):
     for file in gather_ipynbs(files):
         notebook = load_notebook(file)
         notebook = clean_notebook(notebook)
-        file.write_text(notebook_to_str(notebook))
+        file.write_text(notebook_to_str(notebook), encoding='utf-8')
 
 
 @app.command()
@@ -506,7 +506,7 @@ def list_of_workshops_readme():
 
     content += end
 
-    readme.write_text(content)
+    readme.write_text(content, encoding='utf-8')
 
 
 def fix_typos_lines(lines: list[str]):
@@ -682,7 +682,7 @@ def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
 
         cell["source"] = new.splitlines(keepends=True)
 
-    file.write_text(json.dumps(notebook, indent=4) + "\n")
+    file.write_text(json.dumps(notebook, indent=4) + "\n", encoding='utf-8')
     print("✅ Saved!")
 
 
