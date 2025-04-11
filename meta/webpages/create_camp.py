@@ -1,11 +1,8 @@
 import os
 import streamlit as st
-from dotenv import load_dotenv
 
 from utils.streamlit_utils import State
 from utils.camp_utils import Camp
-
-load_dotenv()
 
 
 state = State()
