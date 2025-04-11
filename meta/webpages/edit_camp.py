@@ -62,7 +62,7 @@ else:
 
 st.subheader("Participants")
 st.write(
-    "We need the participants names and emails here mostly to send the career planning docs. "
+    "We need the participants names and emails here mostly to send the career planning docs and pre-fill the 1-1 schedule. "
     "We put it as CSV to make it easier to copy-paste and edit."
 )
 participants = st.text_area(

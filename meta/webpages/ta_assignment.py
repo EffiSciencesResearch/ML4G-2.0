@@ -74,7 +74,7 @@ if not camp:
 errors = camp.validate_teamup()
 if errors:
     st.error(errors)
-    st.write("Please go to the main page to fix this.")
+    st.write("Please go to the main page to fix this, if you use teampup.")
     st.stop()
 
 st.markdown(
