@@ -18,6 +18,13 @@ This page help to duplicate the career planning docs for all participants
 and share them with each of them individually.
 
 First you can edit the participants list below right here, in CSV format if needed.
+
+The format expected is:
+```
+name,email
+Sam,sam@openai.com
+Demis,demis@deepmind.google
+```
 """
 )
 
