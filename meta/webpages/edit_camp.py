@@ -62,44 +62,43 @@ else:
     st.write(f"API key:\n```\n{camp.openai_camp_service_account.api_key}\n```")
     st.button("Revoke OpenAI API key", on_click=delete_service_account)
 
-    if 1:
-        # Get available models from OpenAI API
-        @st.cache_data
-        def get_available_models(api_key):
-            client = OpenAI(api_key=api_key)
-            available_models = client.models.list()
-            return list(available_models.data)
+    # Get available models from OpenAI API
+    @st.cache_data
+    def get_available_models(api_key):
+        client = OpenAI(api_key=api_key)
+        available_models = client.models.list()
+        return list(available_models.data)
 
-        available_models = get_available_models(camp.openai_camp_service_account.api_key)
+    available_models = get_available_models(camp.openai_camp_service_account.api_key)
 
-        st.write(
-            "Below are the available OpenAI models and their associated costs per 1M tokens. No other models are available, if others are needed, contact Diego."
-        )
+    st.write(
+        "Below are the available OpenAI models and their associated costs per 1M tokens. No other models are available, if others are needed, contact Diego."
+    )
 
-        # Create a table of available models and their costs
-        table_data = []
-        for model in available_models:
-            if model.id in model_cost:
-                costs = model_cost.get(model.id, {})
-                table_data.append(
-                    {
-                        "Model": model.id,
-                        "Input Cost ($/1M tokens)": (
-                            f"${costs['input_cost_per_token'] * 1000000:.2f}"
-                            if "input_cost_per_token" in costs
-                            else "N/A"
-                        ),
-                        "Output Cost ($/1M tokens)": (
-                            f"${costs['output_cost_per_token'] * 1000000:.2f}"
-                            if "output_cost_per_token" in costs
-                            else "N/A"
-                        ),
-                        "Max Tokens": costs.get("max_tokens", "N/A"),
-                    }
-                )
+    # Create a table of available models and their costs
+    table_data = []
+    for model in available_models:
+        if model.id in model_cost:
+            costs = model_cost.get(model.id, {})
+            table_data.append(
+                {
+                    "Model": model.id,
+                    "Input Cost ($/1M tokens)": (
+                        f"${costs['input_cost_per_token'] * 1000000:.2f}"
+                        if "input_cost_per_token" in costs
+                        else "N/A"
+                    ),
+                    "Output Cost ($/1M tokens)": (
+                        f"${costs['output_cost_per_token'] * 1000000:.2f}"
+                        if "output_cost_per_token" in costs
+                        else "N/A"
+                    ),
+                    "Max Tokens": costs.get("max_tokens", "N/A"),
+                }
+            )
 
-        table_data.sort(key=lambda x: x["Input Cost ($/1M tokens)"])
-        st.table(table_data)
+    table_data.sort(key=lambda x: x["Input Cost ($/1M tokens)"])
+    st.table(table_data)
 
 st.subheader("Participants")
 st.write(
