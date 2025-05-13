@@ -112,6 +112,12 @@ participants = st.text_area(
     help="CSV with columns 'name' and 'email'.",
     height=200,
 )
+if not participants.startswith("name,email") and not participants.startswith("email,name"):
+    st.error(
+        "The CSV should start with `name,email` or `email,name` as the columns titles. "
+        "Changes will not be saved."
+    )
+    participants = None
 
 if st.button("Save", type="primary") or top_save_button:
     new_data = dict(

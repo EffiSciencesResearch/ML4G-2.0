@@ -14,6 +14,6 @@ deploy:
 	git ls-files | rsync -azP --files-from=- . $(DEPLOY_HOST):$(DEPLOY_PATH)
 	rsync -azP ml4g-web.service $(DEPLOY_HOST):/etc/systemd/system/ml4g-web.service
 	rsync -azP .env-prod $(DEPLOY_HOST):$(DEPLOY_PATH)/.env
-	ssh $(DEPLOY_HOST) "systemctl daemon-reload && systemctl restart ml4g-web"
+	ssh $(DEPLOY_HOST) "systemctl daemon-reload && systemctl restart ml4g-web && journalctl -u ml4g-web -f"
 
 .PHONY: deploy run
