@@ -39,11 +39,10 @@ participants = st.text_area(
     help="CSV with columns 'name' and 'email'.",
     height=200,
 )
-if participants != camp.participants_name_and_email_csv:
-    st.rerun()
 
 template_url = st.text_input(
     "Google Docs template URL",
+    value="https://docs.google.com/document/d/1juNxwskh_6tDz8oL5MwSrGoEkxg3lK8f1rJ0XOqpMGE/edit?tab=t.0",
 )
 folder_url = st.text_input(
     "Folder to put the 1-1 docs",
@@ -80,17 +79,20 @@ st.write(
 
 ok = st.checkbox(f"I checked that the {len(email_to_name)} names and emails are correct")
 st.table([(email, name) for email, name in email_to_name.items()])
-ok &= st.checkbox(f"The template is the correct one: {template_url}")
-ok &= st.checkbox(f"The folder for 1-1 docs is correct: {folder_url}")
+ok &= st.checkbox(f"The template is the correct one (click the url): {template_url}")
+ok &= st.checkbox(f"The folder for 1-1 docs is correct (click the url): {folder_url}")
 ok &= st.checkbox(
     "The folder for 1-1 is not accessible to participants, nor to people outside the camp team."
+)
+ok &= st.checkbox(
+    "The folder for 1-1 docs gives write access to `ml4g-automation@formal-vortex-401808.iam.gserviceaccount.com`."
 )
 ok &= st.checkbox(
     f"The filename `{doc_name}` contains `{to_replace}`.",
     value=to_replace in doc_name,
     disabled=True,
 )
-e = st.checkbox(
+ok &= st.checkbox(
     f"The template contains the placeholder `{to_replace}`, precisely and not something else."
 )
 

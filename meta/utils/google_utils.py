@@ -35,7 +35,10 @@ class GDriveFileInfo(BaseModel):
 
     @property
     def drive_url(self) -> str:
-        return f"https://drive.google.com/drive/u/0/folders/{self.id}"
+        if self.is_folder:
+            return f"https://drive.google.com/drive/u/0/folders/{self.id}"
+        else:
+            return f"https://drive.google.com/file/d/{self.id}/view"
 
     @property
     def is_folder(self) -> bool:
@@ -53,7 +56,7 @@ class GDriveFileInfo(BaseModel):
                 child.fetch_children(api)
 
     def tree(self) -> str:
-        base = f"{self.name} ({self.drive_url})"
+        base = f"{self.name} [{self.mime_type}] ({self.drive_url})"
         if self.children is None:
             return base
         else:
@@ -208,8 +211,11 @@ class SimpleGoogleAPI:
         return [GDriveFileInfo.model_validate(file) for file in files]
 
 
+# %%
+
+
 if __name__ == "__main__":
-    api = SimpleGoogleAPI("../meta/service_account_token.json")
+    api = SimpleGoogleAPI("../service_account_token.json")
 
     # doc_id = "1b_0XbG1X4oz7WW5iB_Ck_k-tQNaScvWhQvtdZsGSZHg"
     # print(api.get_file_name(doc_id))
@@ -221,9 +227,58 @@ if __name__ == "__main__":
     for i, file in enumerate(r):
         print(i, file.name, file.drive_url)
     # %%
-    workshops = r[4]
+    workshops = next(file for file in r if file.name == "Workshops")
+    print(workshops)
+    # %%
     workshops.fetch_children(api)
     # %%
     print(workshops.tree())
 
-# %%
+    # %% hot reload the class GDriveFileInfo in the whole tree
+    def reload_children(file):
+        file.__class__ = GDriveFileInfo
+        if file.children:
+            for child in file.children:
+                reload_children(child)
+
+    reload_children(workshops)
+    # %% List all mime types in the tree
+    mime_types = set()
+
+    def collect_mime_types(file):
+        mime_types.add(file.mime_type)
+        if file.children:
+            for child in file.children:
+                collect_mime_types(child)
+
+    collect_mime_types(workshops)
+    pprint(mime_types)
+
+    # %% Collect all the gdocs
+    gdocs = []
+
+    def collect_gdocs(file):
+        if file.mime_type == "application/vnd.google-apps.document":
+            gdocs.append(file)
+        if file.children:
+            for child in file.children:
+                collect_gdocs(child)
+
+    collect_gdocs(workshops)
+    print(len(gdocs), "gdocs found")
+
+    # Print names sorted
+    for gdoc in sorted(gdocs, key=lambda x: x.name):
+        print(gdoc.name, gdoc.drive_url)
+
+    # %% Download them all as markdown
+    from pathlib import Path
+    from tqdm import tqdm
+
+    out_dir = Path("~/prog/ml4g-wiki/docs/workshops").expanduser()
+    out_dir.mkdir(exist_ok=True)
+    for i, gdoc in enumerate(tqdm(gdocs)):
+        tqdm.write(gdoc.name)
+        markdown = api.export_gdoc_as_markdown(gdoc.id)
+        out_file = out_dir / f"{gdoc.name}.md"
+        out_file.write_text(markdown)
