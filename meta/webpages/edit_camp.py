@@ -1,3 +1,4 @@
+import csv
 import streamlit as st
 from utils.openai_utils import ServiceAccount
 from utils.camp_utils import get_current_camp, edit_current_camp
@@ -112,12 +113,21 @@ participants = st.text_area(
     help="CSV with columns 'name' and 'email'.",
     height=200,
 )
-if not participants.startswith("name,email") and not participants.startswith("email,name"):
+
+# Check that there's at least name & email columns
+detected_columns = csv.DictReader(participants.splitlines()).fieldnames
+if not detected_columns or not all(col in detected_columns for col in ["name", "email"]):
     st.error(
-        "The CSV should start with `name,email` or `email,name` as the columns titles. "
-        "Changes will not be saved."
+        f"""The CSV should have headers `name` and `email` in the first line. Example:\n
+```
+name,email
+jack,jack@ml4good.org
+julia,julia@ml4bad.com
+```
+Detected columns: {detected_columns}
+        """
     )
-    participants = None
+    st.stop()
 
 if st.button("Save", type="primary") or top_save_button:
     new_data = dict(
