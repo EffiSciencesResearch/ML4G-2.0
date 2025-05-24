@@ -210,6 +210,31 @@ class SimpleGoogleAPI:
 
         return [GDriveFileInfo.model_validate(file) for file in files]
 
+    def list_folders(self, folder_id: str) -> list[GDriveFileInfo]:
+        """List all folders within a specified folder."""
+        results = (
+            self.drive_service.files()
+            .list(
+                q=f"'{folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder'",
+                fields="files(id, name, mimeType)",
+                pageSize=1000,
+            )
+            .execute()
+        )
+
+        files = results["files"]
+        if len(files) == 1000:
+            raise ValueError("Too many folders in the directory. We need to paginate.")
+
+        for file in files:
+            file["mime_type"] = file.pop("mimeType")
+
+        return [GDriveFileInfo.model_validate(file) for file in files]
+
+    def rename_file(self, file_id: str, new_name: str) -> None:
+        """Rename a file or folder."""
+        self.drive_service.files().update(fileId=file_id, body={"name": new_name}).execute()
+
 
 # %%
 

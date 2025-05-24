@@ -140,5 +140,60 @@ def duplicate_career_docs(
         print("✅")
 
 
+@app.command(no_args_is_help=True)
+def add_prefix_to_folders(
+    # fmt: off
+    folder_url: Annotated[str, typer.Argument(help="Google Drive folder URL containing the folders to rename")],
+    prefix: Annotated[str, typer.Argument(help="Prefix to add to folder names")],
+    dry_run: Annotated[bool, typer.Option(help="Show what would be done without making changes")] = True
+    # fmt: on
+):
+    """
+    Add a prefix to all folders within a specified Google Drive folder.
+
+    The command will only add the prefix to folders that don't already have it.
+    Use --no-dry-run to actually perform the changes.
+    """
+    folder_id = extract_id_from_url(folder_url)
+
+    # Get all folders in the specified folder
+    folders = API.list_folders(folder_id)
+
+    if not folders:
+        print("No folders found in the specified directory.")
+        return
+
+    changes_needed = []
+    for folder in folders:
+        current_name = folder.name
+        if not current_name.startswith(prefix):
+            new_name = prefix + current_name
+            changes_needed.append((folder.id, current_name, new_name))
+
+    if not changes_needed:
+        print("No folders need to be renamed - all folders already have the prefix.")
+        return
+
+    print(f"\nFound {len(changes_needed)} folders to rename:")
+    for _, old_name, new_name in changes_needed:
+        print(f"  {old_name} -> {new_name}")
+
+    if dry_run:
+        print("\nThis was a dry run. Use --no-dry-run to apply the changes.")
+        return
+
+    if not inquirer.confirm("\nProceed with renaming?", default=True):
+        print("Operation cancelled.")
+        return
+
+    print("\nRenaming folders...")
+    for folder_id, old_name, new_name in changes_needed:
+        print(f"Renaming '{old_name}' to '{new_name}'...", end=" ", flush=True)
+        API.rename_file(folder_id, new_name)
+        print("✅")
+
+    print("\nAll folders have been renamed successfully!")
+
+
 if __name__ == "__main__":
     app()
