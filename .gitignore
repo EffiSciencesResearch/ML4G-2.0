@@ -14,3 +14,4 @@ workshops/gradcam/gradCam/
 workshops/reasoning_models_faithfullness/results/*
 service_account_token.json
 meta/camps
+meta/config.yaml
