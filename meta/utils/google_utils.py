@@ -70,6 +70,7 @@ class SimpleGoogleAPI:
         scopes = [
             "https://www.googleapis.com/auth/documents",
             "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/spreadsheets.readonly",
         ]
         self.credentials = service_account.Credentials.from_service_account_file(
             service_account_file, scopes=scopes
@@ -77,6 +78,7 @@ class SimpleGoogleAPI:
 
         self.drive_service = build("drive", "v3", credentials=self.credentials)
         self.docs_service = build("docs", "v1", credentials=self.credentials)
+        self.sheets_service = build("sheets", "v4", credentials=self.credentials)
 
     def get_file_name(self, file_id: str) -> str:
         """Retrieve the original presentation name using its ID."""
@@ -234,6 +236,31 @@ class SimpleGoogleAPI:
     def rename_file(self, file_id: str, new_name: str) -> None:
         """Rename a file or folder."""
         self.drive_service.files().update(fileId=file_id, body={"name": new_name}).execute()
+
+    def get_sheet_data(self, spreadsheet_id: str, sheet_name: str) -> list[list[str]]:
+        """Get data from a specific sheet in a Google Spreadsheet."""
+        range_name = f"'{sheet_name}'"
+        result = (
+            self.sheets_service.spreadsheets()
+            .values()
+            .get(spreadsheetId=spreadsheet_id, range=range_name)
+            .execute()
+        )
+        return result.get("values", [])
+
+    def get_all_sheet_names(self, spreadsheet_id: str) -> list[str]:
+        """Get all sheet names from a Google Spreadsheet."""
+        result = (
+            self.sheets_service.spreadsheets()
+            .get(spreadsheetId=spreadsheet_id, fields="sheets.properties.title")
+            .execute()
+        )
+        return [sheet["properties"]["title"] for sheet in result["sheets"]]
+
+    def get_all_sheets_data(self, spreadsheet_id: str) -> dict[str, list[list[str]]]:
+        """Get data from all sheets in a Google Spreadsheet."""
+        sheet_names = self.get_all_sheet_names(spreadsheet_id)
+        return {name: self.get_sheet_data(spreadsheet_id, name) for name in sheet_names}
 
 
 # %%

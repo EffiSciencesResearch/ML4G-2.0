@@ -23,6 +23,7 @@ class Camp(BaseModel):
     teamup_admin_url: str | None = None
     participants_name_and_email_csv: str = "name,email\n"
     openai_camp_service_account: ServiceAccount | None = None
+    feedback_sheet_url: str | None = None
     # If you add a new field here, remember to add it to edit_camp.py too.
 
     @classmethod

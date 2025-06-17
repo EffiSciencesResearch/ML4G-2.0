@@ -101,6 +101,18 @@ else:
     table_data.sort(key=lambda x: x["Input Cost ($/1M tokens)"])
     st.table(table_data)
 
+st.subheader("Feedback Sheet")
+st.write(
+    "The feedback sheet URL allows us to analyze session feedback from your Google Sheets. "
+    "Make sure the service account has read access to the sheet."
+)
+feedback_sheet_url = st.text_input(
+    "Feedback sheet URL",
+    value=camp.feedback_sheet_url or "",
+    placeholder="https://docs.google.com/spreadsheets/d/...",
+    help="Google Sheets URL containing session feedback data",
+)
+
 st.subheader("Participants")
 st.write(
     "We need the participants names and emails here mostly to send the career planning docs and pre-fill the 1-1 schedule. "
@@ -134,6 +146,7 @@ if st.button("Save", type="primary") or top_save_button:
         date=date.isoformat(),
         teamup_admin_url=teamup_admin_url,
         participants_name_and_email_csv=participants,
+        feedback_sheet_url=feedback_sheet_url,
     )
 
     # Remove newdata that is None
