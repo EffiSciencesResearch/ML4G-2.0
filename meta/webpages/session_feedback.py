@@ -8,6 +8,10 @@ from utils.google_utils import SimpleGoogleAPI
 from utils.feedback_utils import FeedbackParser
 from utils.streamlit_utils import State
 
+# Expected column header patterns
+RATING_PATTERN = r"How would you rate the '([^']+)'"
+FEEDBACK_PATTERN = r"Any additional feedback on '([^']+)'"
+
 # Page config
 st.set_page_config(page_title="Session Feedback Analysis", page_icon="📊", layout="wide")
 
@@ -22,48 +26,75 @@ if not camp:
     st.error("Please select a camp first on the main page.")
     st.stop()
 
+st.title("📊 Session Feedback Analysis")
+
+st.markdown(
+    f"""
+**What this does:** Extracts and analyzes session feedback from Google Sheets containing participant responses across multiple tabs.
+
+**Input assumptions:**
+- Google Sheets with multiple tabs (each tab processed separately, then aggregated)
+- First row of each tab contains column headers
+- Rating columns must match: `{RATING_PATTERN}`
+- Feedback columns must match: `{FEEDBACK_PATTERN}`
+- Name column (optional): matches patterns like "Name", "Participant Name", etc.
+- Ratings are integers 1-5; text feedback can be any string
+
+**Output:** Aggregated ratings and feedback for each session, with histograms and individual responses.
+
+---
+"""
+)
+
+st.write(f"Analyzing feedback for camp: **{camp.name}**")
+
+# Create example patterns for display (without regex groups)
+rating_example = "How would you rate the 'Session Name' session?"
+feedback_example = "Any additional feedback on 'Session Name'?"
+
 # Initialize API
 SERVICE_ACCOUNT_FILE = Path(__file__).parent.parent / "service_account_token.json"
 API = SimpleGoogleAPI(SERVICE_ACCOUNT_FILE)
 
-st.title("📊 Session Feedback Analysis")
-
-st.write(f"Analyzing feedback for camp: **{camp.name}**")
-
 # Check if feedback sheet URL is configured
 if not camp.feedback_sheet_url:
     st.warning("No feedback sheet URL configured for this camp.")
-    st.write("Please configure the feedback sheet URL in the camp settings.")
-    if st.button("Go to Camp Settings"):
-        st.switch_page("meta/webpages/edit_camp.py")
-    st.stop()
+    st.write("Enter the feedback sheet URL below:")
 
-# Manual URL override for testing
-with st.expander("🔧 Advanced Options", expanded=False):
-    st.write("**Temporary URL Override** (for testing or one-time analysis)")
     manual_url = st.text_input(
-        "Override feedback sheet URL",
+        "Feedback sheet URL",
         value="",
         placeholder="https://docs.google.com/spreadsheets/d/...",
-        help="Leave empty to use the URL from camp settings",
+        help="Google Sheets URL containing session feedback data",
     )
 
-    show_names = st.checkbox(
-        "Show participant names", value=True, help="Uncheck to anonymize feedback"
-    )
+    if not manual_url.strip():
+        st.info("Please enter a feedback sheet URL to continue.")
+        st.stop()
 
-# Use manual URL if provided, otherwise use camp URL
-feedback_url = manual_url.strip() if manual_url.strip() else camp.feedback_sheet_url
+    feedback_url = manual_url.strip()
+else:
+    feedback_url = camp.feedback_sheet_url
+
+# Show participant names toggle
+show_names = st.checkbox("Show participant names", value=True, help="Uncheck to anonymize feedback")
 
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+@st.cache_data(ttl=300)  # Cache forever
 def load_feedback_data(url: str):
     """Load and parse feedback data from Google Sheets."""
     parser = FeedbackParser(API)
     return parser.parse_feedback_sheet(url)
 
 
-# Load feedback data
+# Cache management
+with st.sidebar:
+    st.markdown("---")
+    if st.button("🗑️ Clear Cache", help="Clear cached feedback data to reload from sheet"):
+        st.cache_data.clear()
+        st.success("Cache cleared!")
+        st.rerun()
+
 try:
     with st.spinner("Loading feedback data..."):
         feedback_data = load_feedback_data(feedback_url)
@@ -124,9 +155,12 @@ try:
             st.stop()
         session_names = filtered_sessions
 
-    selected_session = st.selectbox(
+    # Always use pills with first item selected by default
+    selected_session = st.pills(
         "Select a session to analyze:",
         session_names,
+        selection_mode="single",
+        default=session_names[0] if session_names else None,
         help="Choose a session to see detailed feedback and ratings",
     )
 
@@ -186,7 +220,7 @@ try:
                     name_text = (
                         f"**{entry.participant_name}**"
                         if (show_names and entry.participant_name)
-                        else f"*{entry.tab_source}*"
+                        else "*anonymous*"
                     )
 
                     st.write(f"{rating_text} • {name_text}\n\n {entry.feedback_text}")
@@ -206,11 +240,17 @@ try:
                 for rating in sorted(rating_groups.keys(), reverse=True):
                     entries = rating_groups[rating]
                     names = []
+                    anonymous_count = 0
+
                     for entry in entries:
                         if show_names and entry.participant_name:
                             names.append(entry.participant_name)
                         else:
-                            names.append(f"User from {entry.tab_source}")
+                            anonymous_count += 1
+
+                    # Add anonymous count if any
+                    if anonymous_count > 0:
+                        names.append(f"Anonymous ×{anonymous_count}")
 
                     if rating > 0:
                         st.write(f"**{rating}/5**: {', '.join(names)}")
@@ -235,6 +275,12 @@ try:
 
         if comparison_data:
             comparison_df = pd.DataFrame(comparison_data)
+
+            # Add sorting option
+            sort_by_rating = st.checkbox("Sort by average rating (highest first)", value=False)
+
+            if sort_by_rating:
+                comparison_df = comparison_df.sort_values("Average Rating", ascending=False)
 
             # Bar chart of average ratings
             fig = px.bar(
