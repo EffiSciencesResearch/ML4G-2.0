@@ -24,6 +24,9 @@ top_save_button = st.button("Save", key="top-save", type="primary")
 
 date = st.date_input("Date", value=datetime.datetime.fromisoformat(camp.date))
 
+# Password: read only
+password = st.text_input("Password", disabled=True, value=camp.password)
+
 st.subheader("TeamUp")
 st.write(
     "The [TeamUp](https://teamup.com) admin URL allows to edit our calendars. "
