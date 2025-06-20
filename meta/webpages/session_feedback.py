@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from pathlib import Path
+import plotly.graph_objects as go
 
 from utils.camp_utils import get_current_camp
 from utils.google_utils import SimpleGoogleAPI
@@ -302,6 +303,259 @@ try:
             st.info("No rating data available for comparison")
     else:
         st.info("Need at least 2 sessions for comparison")
+
+    # Daily Trends Analysis
+    st.subheader("📈 Daily Trends Analysis")
+
+    # Extract daily metrics from tabs that have the relevant questions
+    daily_questions = {
+        "Content Amount": "What do you think about the amount of content we had today?",
+        "Overall Experience": "Overall Experience: How would you rate your overall experience of the past 24 hours?",
+        "Energy Levels": "How are your energy levels?",
+    }
+
+    @st.cache_data
+    def extract_daily_trends(url: str):
+        """Extract daily trend data for the three recurring questions."""
+        from utils.google_utils import extract_id_from_url
+
+        sheet_id = extract_id_from_url(url)
+        all_sheets_data = API.get_all_sheets_data(sheet_id)
+
+        daily_data = {}
+        day_order = []
+
+        for tab_name, raw_data in all_sheets_data.items():
+            if not raw_data or len(raw_data) < 2:
+                continue
+
+            headers = raw_data[0]
+
+            # Check if this tab has any of our daily questions
+            tab_has_daily_questions = any(
+                any(question.lower() in header.lower() for header in headers)
+                for question in daily_questions.values()
+            )
+
+            if not tab_has_daily_questions:
+                continue
+
+            day_order.append(tab_name)
+            daily_data[tab_name] = {}
+
+            # Find name column
+            name_col_index = -1
+            for i, col in enumerate(headers):
+                if col.lower().strip() in ["name", "participant name", "full name", "your name"]:
+                    name_col_index = i
+                    break
+
+            # Extract data for each daily question
+            for metric_name, question_text in daily_questions.items():
+                question_col_index = -1
+                # Make matching more robust for "Overall Experience"
+                search_text = question_text.split(":")[0]  # Use "Overall Experience" for matching
+
+                for i, col in enumerate(headers):
+                    if search_text.lower() in col.lower():
+                        question_col_index = i
+                        break
+
+                if question_col_index != -1:
+                    daily_data[tab_name][metric_name] = []
+
+                    for row in raw_data[1:]:
+                        if len(row) > question_col_index:
+                            rating_str = row[question_col_index]
+                            name = (
+                                row[name_col_index]
+                                if name_col_index != -1 and len(row) > name_col_index
+                                else None
+                            )
+
+                            try:
+                                # Allow 1-10 scale for Energy Levels, 1-5 for others
+                                max_rating = 10 if metric_name == "Energy Levels" else 5
+                                rating = int(float(rating_str))
+
+                                if 1 <= rating <= max_rating:
+                                    daily_data[tab_name][metric_name].append(
+                                        {"name": name, "rating": rating}
+                                    )
+                            except (ValueError, TypeError):
+                                continue
+
+        return daily_data, day_order
+
+    try:
+        daily_data, day_order = extract_daily_trends(feedback_url)
+
+        if not daily_data:
+            st.info(
+                "No daily trend data found. Make sure your sheet has tabs with the three daily questions."
+            )
+        else:
+            # Plot type toggle
+            plot_type = st.radio(
+                "Visualization type:",
+                ["Individual Lines", "Response Bubbles"],
+                horizontal=True,
+                help="Individual Lines: see each participant's journey. Response Bubbles: see distribution of scores.",
+            )
+
+            # Create plots for each metric
+            for metric_name in daily_questions.keys():
+                st.markdown(f"**{metric_name}**")
+
+                # Determine plot Y-axis range based on metric
+                y_axis_range = [0.5, 10.5] if metric_name == "Energy Levels" else [0.5, 5.5]
+
+                # Prepare data for plotting
+                if plot_type == "Individual Lines":
+                    # --- Spaghetti Plot ---
+                    fig = go.Figure()
+
+                    # Track all participants and averages
+                    participant_data = {}
+                    daily_averages = {}
+
+                    for day_idx, day in enumerate(day_order):
+                        if day in daily_data and metric_name in daily_data[day]:
+                            responses = daily_data[day][metric_name]
+                            ratings = [r["rating"] for r in responses]
+
+                            if ratings:
+                                daily_averages[day_idx] = sum(ratings) / len(ratings)
+                                for response in responses:
+                                    # Use a hash for anonymous users to give them a consistent (but meaningless) ID
+                                    name = (
+                                        response["name"]
+                                        or f"Anonymous_{hash(str(response)) % 1000}"
+                                    )
+                                    if name not in participant_data:
+                                        participant_data[name] = {}
+                                    participant_data[name][day_idx] = response["rating"]
+
+                    # Assign a color to each participant
+                    all_participants = sorted(list(participant_data.keys()))
+                    colors = px.colors.qualitative.Plotly + px.colors.qualitative.Alphabet
+                    participant_colors = {
+                        name: colors[i % len(colors)] for i, name in enumerate(all_participants)
+                    }
+
+                    # Add individual participant lines
+                    for name, data in participant_data.items():
+                        if len(data) >= 2:
+                            days = sorted(data.keys())
+                            ratings = [data[day] for day in days]
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=days,
+                                    y=ratings,
+                                    mode="lines",
+                                    line=dict(width=1.5, color=participant_colors.get(name)),
+                                    name=name,
+                                    showlegend=True,
+                                    hovertemplate=f"<b>{name}</b><br>Day: %{{x+1}}<br>Rating: %{{y}}/5<extra></extra>",
+                                )
+                            )
+
+                    # Add average line
+                    if daily_averages:
+                        avg_days = sorted(daily_averages.keys())
+                        avg_ratings = [daily_averages[day] for day in avg_days]
+                        fig.add_trace(
+                            go.Scatter(
+                                x=avg_days,
+                                y=avg_ratings,
+                                mode="lines+markers",
+                                line=dict(width=5, color="rgba(0,0,0,0.8)"),
+                                marker=dict(size=8, symbol="diamond"),
+                                name="Average",
+                                hovertemplate="<b>Average</b><br>Day: %{x+1}<br>Rating: %{y:.1f}/5<extra></extra>",
+                            )
+                        )
+
+                    fig.update_layout(
+                        xaxis_title="Day",
+                        yaxis_title="Rating",
+                        yaxis=dict(range=y_axis_range, dtick=1),
+                        xaxis=dict(
+                            tickmode="array",
+                            tickvals=list(range(len(day_order))),
+                            ticktext=[f"Day {i+1}" for i in range(len(day_order))],
+                        ),
+                        height=500,
+                        showlegend=True,
+                        margin=dict(t=20, b=20),
+                    )
+
+                else:
+                    # --- Bubble Plot ---
+                    import math
+
+                    fig = go.Figure()
+
+                    # Fixed colors for ratings
+                    rating_colors = {
+                        1: "#d73027",
+                        2: "#fc8d59",
+                        3: "#fee090",
+                        4: "#91bfdb",
+                        5: "#4575b4",
+                        6: "#2166ac",
+                        7: "#1a9850",
+                        8: "#91cf60",
+                        9: "#d9ef8b",
+                        10: "#fee08b",  # Added more colors for 1-10
+                    }
+
+                    for day_idx, day in enumerate(day_order):
+                        if day in daily_data and metric_name in daily_data[day]:
+                            responses = daily_data[day][metric_name]
+                            rating_counts = {}
+                            for response in responses:
+                                rating = response["rating"]
+                                rating_counts[rating] = rating_counts.get(rating, 0) + 1
+
+                            for rating, count in rating_counts.items():
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=[day_idx],
+                                        y=[rating],
+                                        mode="markers",
+                                        marker=dict(
+                                            size=math.sqrt(count) * 12 + 8,
+                                            color=rating_colors.get(rating, "lightgrey"),
+                                            line=dict(width=1, color="white"),
+                                        ),
+                                        name=f"Rating {rating}",
+                                        showlegend=False,
+                                        hovertemplate=(
+                                            f"Day {day_idx+1}<br>Rating: {rating}/10<br>Responses: {count}<extra></extra>"
+                                            if metric_name == "Energy Levels"
+                                            else f"Day {day_idx+1}<br>Rating: {rating}/5<br>Responses: {count}<extra></extra>"
+                                        ),
+                                    )
+                                )
+
+                    fig.update_layout(
+                        xaxis_title="Day",
+                        yaxis_title="Rating",
+                        yaxis=dict(range=y_axis_range, dtick=1),
+                        xaxis=dict(
+                            tickmode="array",
+                            tickvals=list(range(len(day_order))),
+                            ticktext=[f"Day {i+1}" for i in range(len(day_order))],
+                        ),
+                        height=400,
+                        margin=dict(t=20, b=20),
+                    )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Error analyzing daily trends: {str(e)}")
 
 except Exception as e:
     st.error(f"Error loading feedback data: {str(e)}")
