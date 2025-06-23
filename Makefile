@@ -1,6 +1,6 @@
 # Set uv to either /root/.local/bin/uv or uv depending on which one exists
 # That's just because I don't have uv in the path on my deployment server
-UV := $(shell command -v uv >/dev/null 2>&1 && echo "uv" || echo "/root/.local/bin/uv")
+UV := uv
 
 run:
 	$(UV) run streamlit run meta/web.py --server.port 8991
@@ -16,4 +16,7 @@ deploy:
 	rsync -azP .env-prod $(DEPLOY_HOST):$(DEPLOY_PATH)/.env
 	ssh $(DEPLOY_HOST) "systemctl daemon-reload && systemctl restart ml4g-web && journalctl -u ml4g-web -f"
 
-.PHONY: deploy run
+run-changelog:
+	$(UV) run python meta/drive_changelog.py
+
+.PHONY: deploy run run-changelog
