@@ -23,6 +23,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import litellm
 from dotenv import load_dotenv
+from joblib import Parallel, delayed
 
 load_dotenv()
 
@@ -113,6 +114,7 @@ class DriveChangelogMonitor:
         self.model = model
         self.state_file = state_file
         self.service = None
+        self.credentials = None  # Will be set in authenticate()
         self.state: MonitorState | None = None  # Will be loaded in run()
         self.target_folder_ids: set[str] | None = None  # Cache for folder hierarchy checks
 
@@ -121,10 +123,10 @@ class DriveChangelogMonitor:
         if not self.credentials_path.exists():
             raise FileNotFoundError(f"Google credentials not found at {self.credentials_path}")
 
-        credentials = Credentials.from_service_account_file(
+        self.credentials = Credentials.from_service_account_file(
             str(self.credentials_path), scopes=SCOPES
         )
-        self.service = build("drive", "v3", credentials=credentials)
+        self.service = build("drive", "v3", credentials=self.credentials)
         print("✓ Authenticated with Google Drive API")
 
     def load_state(self) -> None:
@@ -137,10 +139,11 @@ class DriveChangelogMonitor:
         self.state.save_to_file(self.state_file)
         print(f"✓ Saved state with {len(self.state.file_revisions)} tracked files")
 
-    def get_file_text_content(self, file_id: str) -> str:
+    def get_file_text_content(self, file_id: str, service=None) -> str:
         """Get text content of a Google Doc"""
+        service = service or self.service
         # Export current version as plain text
-        export_result = self.service.files().export(fileId=file_id, mimeType="text/plain").execute()
+        export_result = service.files().export(fileId=file_id, mimeType="text/plain").execute()
 
         return export_result.decode("utf-8")
 
@@ -193,6 +196,33 @@ class DriveChangelogMonitor:
         print(f"✓ Found {len(all_folders)} total folders to monitor.")
         return all_folders
 
+    def _fetch_file_state_for_scan(self, file_data: Dict[str, Any]) -> tuple[str, FileState]:
+        """
+        Worker function to fetch content and revision for a single file. Fails hard.
+        This creates a new service object for each thread to ensure thread-safety.
+        """
+        local_service = build("drive", "v3", credentials=self.credentials)
+        file_id = file_data["id"]
+        file_name = file_data.get("name", "Untitled")
+
+        text_content = self.get_file_text_content(file_id, service=local_service)
+        revisions_response = local_service.revisions().list(fileId=file_id).execute()
+
+        if not revisions_response.get("revisions"):
+            raise Exception(f"No revisions found for file '{file_name}' (ID: {file_id})")
+
+        current_revision = revisions_response["revisions"][-1]["id"]
+
+        print(f"    ✓ Fetched content and revision for file '{file_name}' (ID: {file_id})")
+        return (
+            file_id,
+            FileState(
+                revision_id=current_revision,
+                text_content=text_content,
+                file_name=file_name,
+            ),
+        )
+
     def _perform_initial_scan(self):
         """
         On the very first run, scans all existing files to create a baseline state.
@@ -226,6 +256,7 @@ class DriveChangelogMonitor:
                     includeItemsFromAllDrives=True,
                     supportsAllDrives=True,
                     pageToken=page_token,
+                    pageSize=100,
                 )
                 .execute()
             )
@@ -233,66 +264,27 @@ class DriveChangelogMonitor:
             files_on_page = response.get("files", [])
             if not files_on_page:
                 print("No files found on this page to process.")
-                break  # Exit if no files are returned at all
+                break
 
-            batch_results = {}
+            print(f"Processing {len(files_on_page)} files from this page in parallel...")
 
-            def batch_callback(request_id, response, exception):
-                file_id, req_type = request_id.split("|", 1)
-                if exception:
-                    print(
-                        f"    - Warning: API error for file '{batch_results.get(file_id, {}).get('name', file_id)}' ({req_type}): {exception}"
-                    )
-                    batch_results[file_id]["error"] = True
-                    return
-
-                if req_type == "content":
-                    batch_results[file_id]["text_content"] = response.decode("utf-8")
-                elif req_type == "revisions":
-                    if response and response.get("revisions"):
-                        batch_results[file_id]["revision_id"] = response["revisions"][-1]["id"]
-                    else:
-                        print(
-                            f"    - Warning: No revisions found for file '{batch_results[file_id]['name']}', skipping."
-                        )
-                        batch_results[file_id]["error"] = True
-
-            batch = self.service.new_batch_http_request(callback=batch_callback)
-
-            for file_data in files_on_page:
-                file_id = file_data["id"]
-                file_name = file_data.get("name", "Untitled")
-                batch_results[file_id] = {"name": file_name}
-                batch.add(
-                    self.service.files().export(fileId=file_id, mimeType="text/plain"),
-                    request_id=f"{file_id}|content",
-                )
-                batch.add(
-                    self.service.revisions().list(fileId=file_id, fields="revisions(id)"),
-                    request_id=f"{file_id}|revisions",
+            try:
+                # Use joblib to parallelize the I/O-bound download tasks using threads.
+                # n_jobs=-1 uses all available CPU cores.
+                results = Parallel(n_jobs=-1, backend="threading", return_as="generator")(
+                    delayed(self._fetch_file_state_for_scan)(file_data)
+                    for file_data in files_on_page
                 )
 
-            print(f"Executing batch request for {len(files_on_page)} files...")
-            batch.execute()
+                for file_id, file_state in results:
+                    self.state.file_revisions[file_id] = file_state
+                    files_processed += 1
 
-            for file_id, result in batch_results.items():
-                file_name = result["name"]
-                print(f"  - Processing state for: {file_name}")
-
-                if (
-                    result.get("error")
-                    or "text_content" not in result
-                    or "revision_id" not in result
-                ):
-                    # A warning was already printed in the batch callback
-                    continue
-
-                self.state.file_revisions[file_id] = FileState(
-                    revision_id=result["revision_id"],
-                    text_content=result["text_content"],
-                    file_name=file_name,
-                )
-                files_processed += 1
+            except Exception as e:
+                # joblib re-raises the first exception from a worker, so we fail hard.
+                print(f"\n❌ A critical error occurred during parallel file processing: {e}")
+                print("Aborting initial scan.")
+                raise  # Re-raise the exception to be caught by the main error handler.
 
             page_token = response.get("nextPageToken", None)
             if not page_token:
@@ -820,7 +812,7 @@ Summary:"""
 @app.command()
 def main(
     credentials_path: Path = typer.Option(
-        default=lambda: Path(os.getenv("GOOGLE_CREDENTIALS_PATH", "secret/credentials.json")),
+        default=lambda: Path(os.getenv("GOOGLE_CREDENTIALS_PATH", "meta/credentials.json")),
         help="Path to Google service account credentials JSON file",
     ),
     slack_webhook_url: str = typer.Option(
