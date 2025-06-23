@@ -45,6 +45,7 @@ dependencies = [
     "litellm>=1.67.0",
     "requests>=2.32.0",
     "pydantic>=2.10.0",
+    "joblib>=1.4.2",
 ]
 
 [dependency-groups]
