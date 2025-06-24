@@ -142,7 +142,8 @@ class DriveChangelogMonitor:
     def get_file_text_content(self, file_id: str, service=None) -> str:
         """Get text content of a Google Doc"""
         service = service or self.service
-        # Export current version as plain text
+        # Export current version as plain text. This method correctly exports
+        # content from all tabs in a document.
         export_result = service.files().export(fileId=file_id, mimeType="text/plain").execute()
 
         return export_result.decode("utf-8")
@@ -602,6 +603,7 @@ Summary:"""
                                 new_text.splitlines(keepends=True),
                                 fromfile="previous version",
                                 tofile="current version",
+                                n=5,
                             )
                         )
 
@@ -670,7 +672,17 @@ Summary:"""
     def format_slack_message(self, file_changes: List[FileChange]) -> Dict[str, Any]:
         """Format file changes into Slack message payload"""
         if not file_changes:
-            return {}
+            return {
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "🍃 No changes to workshop materials today.",
+                        },
+                    }
+                ]
+            }
 
         # Group changes by type
         changes_by_type = {"added": [], "modified": [], "deleted": []}
@@ -782,18 +794,16 @@ Summary:"""
             # Fetch and process changes
             changes = self.fetch_changes()
             if not changes:
-                print("ℹ No changes to process")
-                self.save_state()
-                return
+                print("ℹ No changes to process, a 'no changes' notification will be sent.")
 
             file_changes = self.process_changes(changes)
 
-            if file_changes:
-                # Format and send notification
-                slack_payload = self.format_slack_message(file_changes)
-                self.send_slack_notification(slack_payload)
-            else:
-                print("ℹ No relevant changes found")
+            if not file_changes:
+                print("ℹ No relevant changes found, a 'no changes' notification will be sent.")
+
+            # Format and send notification
+            slack_payload = self.format_slack_message(file_changes)
+            self.send_slack_notification(slack_payload)
 
             # Save updated state
             self.save_state()
