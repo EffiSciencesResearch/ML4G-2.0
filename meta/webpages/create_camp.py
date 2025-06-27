@@ -12,7 +12,7 @@ st.title("Create a new camp")
 
 with st.form("create_camp"):
     name = st.text_input("Name")
-    date = st.date_input("Date")
+    date = st.date_input("First day of the camp (Day 0)")
     st.write("The admin password can be found at the end of the TA & Teacher guide.")
     admin_password = st.text_input("Admin password to create the camp", type="password")
 
