@@ -1,5 +1,6 @@
 import streamlit as st
 import dotenv
+from streamlit_product_card import product_card
 
 from utils.streamlit_utils import State
 
@@ -41,13 +42,22 @@ if not state.current_camp:
 st.subheader("Most useful tools")
 cols = st.columns(3)
 tools = [
-    ("webpages/edit_camp.py", "🏠", "Get OpenAI keys, set variables for everyone."),
+    (
+        "webpages/edit_camp.py",
+        "🏠",
+        "Get OpenAI keys, set participants and variables for everyone.",
+    ),
     ("webpages/career_docs.py", "📄", "Auto duplicate google docs for each participant."),
     ("webpages/one_on_one_scheduler.py", "👥", "Schedule one-on-ones with participants."),
 ]
 
 for i, (page, icon, description) in enumerate(tools):
     with cols[i]:
-        with st.container(border=True):
-            st.page_link(page, use_container_width=True, icon=icon)
-            st.write(description)
+        title = page.split("/")[-1].replace("_", " ").replace(".py", "").title()
+        was_clicked = product_card(
+            product_name=f"{icon} {title}",
+            description=description,
+            key=f"tool_{i}",
+        )
+        if was_clicked:
+            st.switch_page(page)

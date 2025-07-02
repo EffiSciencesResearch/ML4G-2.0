@@ -1969,6 +1969,7 @@ dependencies = [
     { name = "streamlit" },
     { name = "streamlit-local-storage" },
     { name = "streamlit-pills" },
+    { name = "streamlit-product-card" },
     { name = "toml" },
     { name = "torch", version = "2.6.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.6.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
@@ -2022,6 +2023,7 @@ requires-dist = [
     { name = "streamlit", specifier = ">=1.42.2" },
     { name = "streamlit-local-storage", specifier = ">=0.0.25" },
     { name = "streamlit-pills", specifier = ">=0.3.0" },
+    { name = "streamlit-product-card", specifier = ">=1.0.0" },
     { name = "toml" },
     { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", index = "https://download.pytorch.org/whl/cpu" },
@@ -3672,6 +3674,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1b/aa/ffc0955bb8a553bd1e9e0adf0467f4d4f706c26925c73dfde6bab783645e/streamlit-pills-0.3.0.tar.gz", hash = "sha256:47668ad4fd8c137b203ee1aec9d9d44ed8b2ff7ded9f586984f204be2eac772f", size = 696547, upload-time = "2022-11-22T01:18:52.77Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/bc/e5328adadf5479795d6c7cf30c3fb69dba818384b1d44b48562cc9b2e618/streamlit_pills-0.3.0-py3-none-any.whl", hash = "sha256:b66fdf7b1820c09b751a76ef1ae01ab93221d0c2c2d1cd489b711b9afaae0513", size = 706314, upload-time = "2022-11-22T01:18:55.566Z" },
+]
+
+[[package]]
+name = "streamlit-product-card"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/74/7ae82279693dafe683a1771f2394b995f867706b6aefc0216981542d767c/streamlit_product_card-1.0.0.tar.gz", hash = "sha256:c636cad5edbe52060db1e3641c7ba926726d630807883b5191efb2081e17c72a", size = 689776, upload-time = "2025-05-26T06:17:16.606Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/76/682eeff3ab2e69ab863265e22dd18a354c50c461be4068ee56b10f32544a/streamlit_product_card-1.0.0-py3-none-any.whl", hash = "sha256:65c9e4c1fff5f2b1ddf2d232a52f2d902e7308e788dc7be281f857c4dc3c1808", size = 697191, upload-time = "2025-05-26T06:17:14.889Z" },
 ]
 
 [[package]]
