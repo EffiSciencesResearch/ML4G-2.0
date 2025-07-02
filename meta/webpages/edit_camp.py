@@ -27,20 +27,6 @@ date = st.date_input("Date", value=datetime.datetime.fromisoformat(camp.date))
 # Password: read only
 password = st.text_input("Password", disabled=True, value=camp.password)
 
-st.subheader("TeamUp")
-st.write(
-    "The [TeamUp](https://teamup.com) admin URL allows to edit our calendars. "
-    "It can be found/created in the settings of a new calendar. "
-    "Go to Settings > Sharing > Create Link > Select Administration & All Calendars.  \n"
-    "You can't change it once it's set, and it's "
-    + ("already set." if camp.teamup_admin_url else "not set yet.")
-)
-teamup_admin_url = st.text_input(
-    "Teamup admin URL",
-    placeholder="https://teamup.com/ks...",
-    disabled=camp.teamup_admin_url is not None,
-)
-
 # --------------------------------
 st.subheader("OpenAI API keys")
 st.write(
@@ -147,7 +133,6 @@ Detected columns: {detected_columns}
 if st.button("Save", type="primary") or top_save_button:
     new_data = dict(
         date=date.isoformat(),
-        teamup_admin_url=teamup_admin_url,
         participants_name_and_email_csv=participants,
         feedback_sheet_url=feedback_sheet_url,
     )

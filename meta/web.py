@@ -7,8 +7,7 @@ load_dotenv()
 page_directory = (Path(__file__).parent / "webpages").resolve()
 
 pages = [
-    ("Dashboard", "dashboard.py"),
-    ("TA Assignment", "ta_assignment.py"),
+    ("🏠 Dashboard", "dashboard.py"),
     ("Career Docs", "career_docs.py"),
     ("Edit Camp", "edit_camp.py"),
 ]

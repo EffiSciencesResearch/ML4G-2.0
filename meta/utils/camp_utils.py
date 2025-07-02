@@ -1,7 +1,6 @@
 import csv
 import datetime
 from pathlib import Path
-import re
 import string
 from pydantic import BaseModel
 import random
@@ -13,14 +12,11 @@ from utils.openai_utils import ServiceAccount
 
 CAMPS_DIR = Path(__file__).parent.parent / "camps"
 
-PATTERN_TEAMUP_URL = re.compile("https://teamup.com/([a-z0-9]+)")
-
 
 class Camp(BaseModel):
     name: str
     password: str
     date: str
-    teamup_admin_url: str | None = None
     participants_name_and_email_csv: str = "name,email\n"
     openai_camp_service_account: ServiceAccount | None = None
     feedback_sheet_url: str | None = None
@@ -29,7 +25,7 @@ class Camp(BaseModel):
     @classmethod
     def new(cls, name: str, date: str) -> "Camp":
         password = "".join(random.choices(string.ascii_letters, k=16))
-        return cls(name=name, password=password, date=date, teamup_admin_url=None)
+        return cls(name=name, password=password, date=date)
 
     def save_to_disk(self):
         campfile = CAMPS_DIR / f"{self.name}.json"
@@ -42,19 +38,6 @@ class Camp(BaseModel):
         camp = self.model_validate_json(path.read_text("utf-8"))
         assert camp.name == name, f"Camp name {camp.name} does not match file name {name}"
         return camp
-
-    def validate_teamup(self) -> str | None:
-        if not self.teamup_admin_url:
-            return "No teamup admin URL set"
-
-        if not PATTERN_TEAMUP_URL.match(self.teamup_admin_url):
-            return f"Invalid teamup admin URL. Must match `{PATTERN_TEAMUP_URL}`"
-
-        return None
-
-    @property
-    def teamup_admin_calendar_key(self) -> str:
-        return PATTERN_TEAMUP_URL.match(self.teamup_admin_url).group(1)
 
     @property
     def start_datetime(self):

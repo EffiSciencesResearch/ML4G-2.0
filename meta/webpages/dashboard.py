@@ -1,11 +1,7 @@
-from datetime import datetime, timezone
-
 import streamlit as st
 import dotenv
-from streamlit_pills import pills as st_pills
 
 from utils.streamlit_utils import State
-from utils.teamup_utils import Teamup, MEAL_INDICATOR
 
 dotenv.load_dotenv()
 
@@ -44,110 +40,14 @@ if not state.current_camp:
 
 st.subheader("Most useful tools")
 cols = st.columns(3)
-cols[0].page_link("webpages/edit_camp.py", use_container_width=True, icon="🏠")
-cols[1].page_link("webpages/career_docs.py", use_container_width=True, icon="📄")
-cols[2].page_link("webpages/one_on_one_scheduler.py", use_container_width=True, icon="👥")
+tools = [
+    ("webpages/edit_camp.py", "🏠", "Get OpenAI keys, set variables for everyone."),
+    ("webpages/career_docs.py", "📄", "Auto duplicate google docs for each participant."),
+    ("webpages/one_on_one_scheduler.py", "👥", "Schedule one-on-ones with participants."),
+]
 
-
-teamup = Teamup(state.current_camp)
-
-if state.current_camp.validate_teamup() is not None:
-    st.divider()
-    st.warning(
-        "The dashboard works only when using teamup, and it shows the next events for each TA. You can add a teamup URL in the Edit Camp page, if you do use teamup."
-    )
-    st.stop()
-
-
-@st.cache_data()
-def get_events():
-    return teamup.get_events()
-
-
-@st.cache_data()
-def get_subcalendar_to_name():
-    return teamup.get_subcalendar_to_name()
-
-
-events = get_events()
-
-st.sidebar.button("Refresh calendar", on_click=get_events.clear)
-
-subcalendar_to_name = get_subcalendar_to_name()
-
-try:
-    default_index = list(subcalendar_to_name.values()).index(
-        state.per_browser_settings.dashboard_name
-    )
-except ValueError:
-    default_index = 0
-
-current_user = st_pills(
-    "View dashboard as",
-    list(subcalendar_to_name),
-    format_func=lambda x: subcalendar_to_name[x],
-    index=default_index,
-    key="dashboard_name",
-)
-current_user_name = subcalendar_to_name[current_user]
-state.save_settings(dashboard_name=current_user_name)
-
-hide_meals = st.sidebar.checkbox(f"Hide meals ({MEAL_INDICATOR})", value=True)
-
-# Columns:
-# 1. List of next events for this person
-# 2. List of next events this person is in charge of
-
-col_next_events, col_in_charge = st.columns(2)
-
-next_events = []
-in_charge_events = []
-now = datetime.now(timezone.utc)
-
-for event in events:
-    # Event is in the past
-    if event.end_datetime < now:
-        continue
-    if hide_meals and MEAL_INDICATOR in event.title:
-        continue
-
-    if current_user in event.subcalendar_ids:
-        next_events.append(event)
-    if current_user_name in event.in_charge():
-        in_charge_events.append(event)
-
-
-def show_event_list(events):
-    if not events:
-        st.write("No events")
-        return
-
-    text = ""
-    for event in events:
-        time_until = event.start_datetime - now
-        # Show as days? hh:mm
-        if time_until.days:
-            time_until_str = f"{time_until.days} day{'s' if time_until.days > 1 else ''} {time_until.seconds // 3600}h"
-        else:
-            time_until_str = f"{time_until.seconds // 3600}h {time_until.seconds % 3600 // 60}m"
-
-        # if in < 24h, title in red
-        if time_until.days == 0:
-            title = f":primary[{event.title}]"
-        else:
-            title = event.title
-
-        text += f"- **{title}** :grey[in {time_until_str}]\n"
-
-    st.write(text)
-
-
-with col_next_events:
-    st.header(f"{current_user_name}'s next events")
-
-    show_event_list(next_events)
-
-with col_in_charge:
-    st.header(f"{current_user_name} is in charge of")
-
-    show_event_list(in_charge_events)
+for i, (page, icon, description) in enumerate(tools):
+    with cols[i]:
+        with st.container(border=True):
+            st.page_link(page, use_container_width=True, icon=icon)
+            st.write(description)
