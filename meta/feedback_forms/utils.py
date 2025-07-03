@@ -30,8 +30,16 @@ def get_credentials():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
-            creds = flow.run_local_server(port=0)
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
+                creds = flow.run_local_server(port=0)
+            except FileNotFoundError:
+                print(f"\n❌ Missing Google OAuth credentials: {CREDS_PATH}")
+                print("\nTo get credentials:")
+                print("1. Go to https://console.cloud.google.com/apis/credentials")
+                print("2. Create OAuth 2.0 Client ID (Desktop app)")
+                print("3. Download JSON and save as creds.json in meta/feedback_forms/")
+                raise
         
         # Save the credentials for the next run
         with open(TOKEN_PATH, 'wb') as token:
