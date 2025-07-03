@@ -1,0 +1,74 @@
+[project]
+name = "ML4G2.0"
+version = "0.0.1"
+requires-python = "~=3.11"  # Version on colab
+dependencies = [
+    "torch",
+    "torchvision",
+    "anthropic",
+    "black[jupyter]",
+    "einops",
+    "gymnasium",
+    "inspect-ai==0.3.25",
+    "ipykernel",
+    "ipywidgets",
+    "jaxtyping",
+    "jupyter",
+    "matplotlib",
+    "notebook",
+    "openai",
+    "pandas",
+    "plotly",
+    "pre-commit",
+    "pygame",
+    "pytest",
+    "rich",
+    "scikit-learn",
+    "toml",
+    "tqdm",
+    "transformer-lens",
+    "transformer-utils",
+    "transformers",
+    "typeguard",
+    "typer",
+    "circuitsvis",
+    "opencv-python",
+    "inquirerpy",
+    "google-api-python-client",
+    "google-auth",
+    "google-auth-oauthlib",
+    "google-auth-httplib2",
+    "streamlit>=1.42.2",
+    "python-dotenv>=1.0.1",
+    "streamlit-pills>=0.3.0",
+    "streamlit-local-storage>=0.0.25",
+    "litellm>=1.67.0",
+    "pyyaml>=6.0.2",
+    "requests>=2.31.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.1.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["meta"]
+
+[tool.uv]
+package = false
+
+# Use only pytorch-cpu as we don't do GPU intensive things in this project
+# It saves a lot of disk space and download time. For GPU it's good practice to test on colab, as it's where most people will run it.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+torchvision = [
+    { index = "pytorch-cpu" },
+]

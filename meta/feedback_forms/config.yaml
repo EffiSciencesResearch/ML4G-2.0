@@ -1,0 +1,138 @@
+camp_name: "ML4good Italy 2025"
+
+# Google Drive folder ID where form shortcuts will be created
+# To get the folder ID: open the folder in Google Drive and copy the ID from the URL
+# Example: https://drive.google.com/drive/folders/1ABC123... → folder ID is "1ABC123..."
+drive_folder_id: "1gDCTVX06vrAaZnb2IxjdxFcu-M-uYLNc"  # Leave empty to skip creating shortcuts
+
+teachers:
+  - "Diego"
+  - "Julian"
+  - "T-bo"
+  - "Linda"
+
+form_description: |
+  The goal of this form is to allow us to improve ML4Good day by day during the camp, and for the next participants. Thank you for all answers and extra comments.
+
+  More detailed feedback is what helps us the most improve the workshops, both for the other days and the future iterations of the camp. All of it optional, but every bit of information will make someone's life better (yours or future/other participants).
+
+  You can add many bullet points, each of them will help us to gradient descent in the right direction. Examples:
+  Not enough talks/guidance
+  Too fast
+  Instructions unclear
+  I'm confused about the material
+  I learned a lot
+  There was too many details
+  (feel free to just copy paste the bullet points that apply!)
+
+pre_questions:
+  - text: "Name"
+    kind: "text"
+    mandatory: true
+  
+  - text: "What was your highlight of the day?"
+    kind: "paragraph"
+    mandatory: false
+  
+  - text: "What do you think about the amount of content we had today?"
+    kind: "scale_5_point"
+    scale_left: "too little"
+    scale_right: "too much"
+    mandatory: false
+
+timetable:
+  day_1:
+    meme: "doge.png"
+    sessions:
+      - name: "Q&A on the prerequisites"
+      - name: "Hyperparameters"
+      - name: "Chapter 1 Capabilities"
+        reading_group: true
+      - name: "Intro to AI Safety"
+      - name: "How to create an AGI?"
+      - name: "Agents"
+      - name: "Group Photo"
+      - name: "Intro to Cursor"
+      - name: "Q&A"
+  
+  day_2:
+    meme: "drake.png"
+    sessions:
+      - name: "Adversarial Attacks"
+      - name: "Chapter 2 AI Risks"
+        reading_group: true
+      - name: "TA inspiration"
+      - name: "Transformers"
+
+  day_3:
+    meme: "flipchart.png"
+    sessions:
+      - name: "Evals"
+      - name: "Chapter 3 - Solutions"
+        reading_group: true
+      - name: "Workshop: Strategy"
+      - name: "Assumptions & what's important"
+      - name: "One on ones"
+
+  day_4:
+    meme: "brain.png"
+    sessions:
+      - name: "Chapter 4: Governance"
+        reading_group: true
+      - name: "AI Safety bills"
+      - name: "EffiSciences + CeSIA"
+      - name: "Literature Review"
+    day_questions:
+      - text: "Which literature review topic did you choose and why?"
+        kind: "paragraph"
+        mandatory: false
+      - text: "How confident do you feel about your literature review project?"
+        kind: "scale_1_10"
+        mandatory: false
+
+  day_5:
+    meme: "ohio.png"
+    sessions:
+      - name: "RLHF and Reasoning models Lecture"
+      - name: "Intro to Interpretability Lecture"
+      - name: "Logit Lens Exercise (if participated)"
+      - name: "Theory of change workshop / Career planing"
+      - name: "Project brainstorm"
+
+  day_6:
+    meme: "doge.png"
+    sessions:
+      - name: "Project red teaming"
+      - name: "Project Work"
+      - name: "Career meetings"
+
+  day_7:
+    meme: "swerfe.png"
+    sessions:
+      - name: "Project Work"
+      - name: "Career meetings"
+      - name: "Result presentation"
+      - name: "Closing session"
+
+  day_8:
+    meme: "doge.png"
+    sessions:
+      - name: "clean up"
+      - name: "drive home"
+
+post_questions:
+  - text: "Overall Experience: How would you rate your overall experience of the past 24 hours?"
+    kind: "scale_1_10"
+    mandatory: false
+  
+  - text: "How are your energy levels?"
+    kind: "scale_1_10"
+    mandatory: false
+  
+  - text: "What did you learn today, that you definitely want to remember?"
+    kind: "text"
+    mandatory: false
+  
+  - text: "Open comments"
+    kind: "text"
+    mandatory: false 
