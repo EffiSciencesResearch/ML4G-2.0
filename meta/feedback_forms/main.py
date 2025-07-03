@@ -192,9 +192,16 @@ def main():
     
     # Get Google services
     print("\nAuthenticating with Google...")
-    service = get_forms_service()
-    drive_service = get_drive_service()
-    print("✓ Authentication successful!\n")
+    try:
+        service = get_forms_service()
+        drive_service = get_drive_service()
+        print("✓ Authentication successful!\n")
+    except FileNotFoundError:
+        # Error message already printed by get_credentials()
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Authentication failed: {e}")
+        sys.exit(1)
     
     # Create form for the selected day
     camp_name = config['camp_name']
