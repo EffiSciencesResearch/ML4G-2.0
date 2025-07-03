@@ -44,7 +44,9 @@ dependencies = [
     "streamlit-local-storage>=0.0.25",
     "litellm>=1.67.0",
     "pyyaml>=6.0.2",
-    "requests>=2.31.0",
+    "requests>=2.32.0",
+    "pydantic>=2.10.0",
+    "joblib>=1.4.2",
 ]
 
 [dependency-groups]

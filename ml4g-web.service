@@ -1,0 +1,10 @@
+[Unit]
+Description=Streamlit app of tools for ML4Good organisers
+After=network.target
+
+[Service]
+WorkingDirectory=/srv/ml4g
+ExecStart=make run
+
+[Install]
+WantedBy=multi-user.target

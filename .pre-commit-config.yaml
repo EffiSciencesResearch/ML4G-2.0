@@ -1,23 +1,67 @@
 repos:
+
+-   repo: local
+    hooks:
+    -   id: generate-notebooks
+        name: generate exercise notebooks
+        files: \.ipynb$
+        exclude: ^tests/
+        language: system
+        entry: python
+        args:
+        - meta/tools.py
+        - sync
+
+
+-   repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+    -   id: black
+        name: format python files with black
+        args:
+        - --line-length
+        - "100"
+
+-   repo: local
+    hooks:
+    -   id: neat-notebooks
+        name: remove jupyer outputs, metadata, fmt and add badge
+        files: \.ipynb$
+        exclude: ^tests/
+        language: system
+        entry: python
+        args:
+        - meta/tools.py
+        - neat
+
+    -   id: update-readme
+        name: sync TOC in README.md
+        always_run: true
+        pass_filenames: false
+        language: system
+        entry: python
+        args:
+        - meta/tools.py
+        - list-of-workshops-readme
+
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
     -   id: check-yaml
     -   id: end-of-file-fixer
     -   id: check-added-large-files
         args: ['--maxkb=500']
--   repo: https://github.com/psf/black
-    rev: 24.2.0
+        # To exclude more files, see https://pre-commit.com/#regular-expressions
+        exclude: ^uv.lock$
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.8
     hooks:
-    -   id: black-jupyter
+    -   id: ruff
+        # Regex are python regex
+        files: ^(meta|tests)/.*\.py$
         args:
-        - --line-length
-        - "100"
--   repo: local
-    hooks:
-    -   id: jupyer-strip-unnecessary
-        name: jupyter-strip-unnecessary
-        files: \.ipynb$
-        language: system
-        pass_filenames: true
-        entry: meta/clean-jupyter.sh
+        - "--config"
+        - "pyproject.toml"
+        - "--fix"
+        - "--exit-non-zero-on-fix"
