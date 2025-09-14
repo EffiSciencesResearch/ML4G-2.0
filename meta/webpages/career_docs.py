@@ -12,6 +12,7 @@ with st.sidebar:
 camp = get_current_camp()
 
 SERVICE_ACCOUNT_FILE = Path(__file__).parent.parent / "service_account_token.json"
+BOT_EMAIL = "ml4g-automation@formal-vortex-401808.iam.gserviceaccount.com"
 API = SimpleGoogleAPI(SERVICE_ACCOUNT_FILE)
 
 st.write(
@@ -84,9 +85,8 @@ ok &= st.checkbox(f"The folder for 1-1 docs is correct (click the url): {folder_
 ok &= st.checkbox(
     "The folder for 1-1 is not accessible to participants, nor to people outside the camp team."
 )
-ok &= st.checkbox(
-    "The folder for 1-1 docs gives write access to `ml4g-automation@formal-vortex-401808.iam.gserviceaccount.com`."
-)
+ok &= st.checkbox("The folder for 1-1 docs gives write access to the bot.")
+st.write(f"Bot email: `{BOT_EMAIL}`")
 ok &= st.checkbox(
     f"The filename `{doc_name}` contains `{to_replace}`.",
     value=to_replace in doc_name,

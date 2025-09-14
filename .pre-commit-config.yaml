@@ -45,7 +45,7 @@ repos:
         - list-of-workshops-readme
 
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
     -   id: check-yaml
     -   id: end-of-file-fixer
@@ -55,7 +55,7 @@ repos:
         exclude: ^uv.lock$
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.8
+    rev: v0.13.0
     hooks:
     -   id: ruff
         # Regex are python regex

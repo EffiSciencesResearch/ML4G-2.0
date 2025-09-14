@@ -14,7 +14,10 @@ deploy:
 	git ls-files | rsync -azP --files-from=- . $(DEPLOY_HOST):$(DEPLOY_PATH)
 	rsync -azP ml4g-web.service $(DEPLOY_HOST):/etc/systemd/system/ml4g-web.service
 	rsync -azP .env-prod $(DEPLOY_HOST):$(DEPLOY_PATH)/.env
-	ssh $(DEPLOY_HOST) "systemctl daemon-reload && systemctl restart ml4g-web && journalctl -u ml4g-web -f"
+	ssh $(DEPLOY_HOST) "systemctl daemon-reload && systemctl restart ml4g-web && journalctl -u ml4g-web -f -n 30"
+
+logs:
+	ssh $(DEPLOY_HOST) "journalctl -u ml4g-web -f -n 100"
 
 run-changelog:
 	$(UV) run python meta/drive_changelog.py
