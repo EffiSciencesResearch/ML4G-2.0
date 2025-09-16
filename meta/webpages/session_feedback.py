@@ -374,8 +374,12 @@ try:
                             )
 
                             try:
-                                # Allow 1-10 scale for Energy Levels, 1-5 for others
-                                max_rating = 10 if metric_name == "Energy Levels" else 5
+                                # Allow 1-10 scale for Energy Levels and Overall Experience, 1-5 for others
+                                max_rating = (
+                                    10
+                                    if metric_name in ["Energy Levels", "Overall Experience"]
+                                    else 5
+                                )
                                 rating = int(float(rating_str))
 
                                 if 1 <= rating <= max_rating:
@@ -408,7 +412,11 @@ try:
                 st.markdown(f"**{metric_name}**")
 
                 # Determine plot Y-axis range based on metric
-                y_axis_range = [0.5, 10.5] if metric_name == "Energy Levels" else [0.5, 5.5]
+                y_axis_range = (
+                    [0.5, 10.5]
+                    if metric_name in ["Energy Levels", "Overall Experience"]
+                    else [0.5, 5.5]
+                )
 
                 # Prepare data for plotting
                 if plot_type == "Individual Lines":
@@ -533,7 +541,8 @@ try:
                                         showlegend=False,
                                         hovertemplate=(
                                             f"Day {day_idx+1}<br>Rating: {rating}/10<br>Responses: {count}<extra></extra>"
-                                            if metric_name == "Energy Levels"
+                                            if metric_name
+                                            in ["Energy Levels", "Overall Experience"]
                                             else f"Day {day_idx+1}<br>Rating: {rating}/5<br>Responses: {count}<extra></extra>"
                                         ),
                                     )
