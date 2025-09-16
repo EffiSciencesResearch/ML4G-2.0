@@ -15,3 +15,7 @@ workshops/reasoning_models_faithfullness/results/*
 service_account_token.json
 meta/camps
 meta/config.yaml
+
+# Feedback forms authentication files
+meta/feedback_forms/creds.json
+meta/feedback_forms/token.pickle
