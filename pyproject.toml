@@ -1,7 +1,7 @@
 [project]
 name = "ML4G2.0"
 version = "0.0.1"
-requires-python = "~=3.11"  # Version on colab
+requires-python = "~=3.12.0"  # Version on colab
 dependencies = [
     "torch",
     "torchvision",
