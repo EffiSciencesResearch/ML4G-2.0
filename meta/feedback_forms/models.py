@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 class BaseQuestionConfig(BaseModel):
     text: str
+    description: str | None = None
     mandatory: bool = False
 
 
@@ -43,6 +44,7 @@ AnyQuestionConfig = Union[
 
 class SessionConfig(BaseModel):
     name: str
+    description: str | None = None
     reading_group: bool = False
 
 
@@ -72,7 +74,7 @@ if __name__ == "__main__":
         """Generate JSON schema from CampConfig model."""
         schema = CampConfig.model_json_schema()
         schema_path = Path(__file__).parent / "config.schema.json"
-        schema_path.write_text(json.dumps(schema, indent=2))
+        schema_path.write_text(json.dumps(schema, indent=2) + "\n")
         print(f"✅ Schema generated at {schema_path}")
 
     main()

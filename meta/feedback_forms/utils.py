@@ -173,6 +173,7 @@ def create_text_question(config: TextQuestionConfig):
     return {
         "item": {
             "title": config.text,
+            "description": config.description,
             "questionItem": {"question": {"textQuestion": {}, "required": config.mandatory}},
         }
     }
@@ -183,6 +184,7 @@ def create_paragraph_question(config: ParagraphQuestionConfig):
     return {
         "item": {
             "title": config.text,
+            "description": config.description,
             "questionItem": {
                 "question": {"textQuestion": {"paragraph": True}, "required": config.mandatory}
             },
@@ -196,6 +198,7 @@ def create_choice_question(config: ChoiceQuestionConfig):
     return {
         "item": {
             "title": config.text,
+            "description": config.description,
             "questionItem": {
                 "question": {
                     "choiceQuestion": {
@@ -223,6 +226,7 @@ def create_scale_question(config: ScaleQuestionConfig):
     return {
         "item": {
             "title": config.text,
+            "description": config.description,
             "questionItem": {
                 "question": {"scaleQuestion": scale_question_payload, "required": config.mandatory}
             },

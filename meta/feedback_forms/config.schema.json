@@ -6,6 +6,18 @@
           "title": "Text",
           "type": "string"
         },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
         "mandatory": {
           "default": false,
           "title": "Mandatory",
@@ -98,6 +110,18 @@
           "title": "Text",
           "type": "string"
         },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
         "mandatory": {
           "default": false,
           "title": "Mandatory",
@@ -121,6 +145,18 @@
         "text": {
           "title": "Text",
           "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
         },
         "mandatory": {
           "default": false,
@@ -180,6 +216,18 @@
           "title": "Name",
           "type": "string"
         },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
         "reading_group": {
           "default": false,
           "title": "Reading Group",
@@ -197,6 +245,18 @@
         "text": {
           "title": "Text",
           "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
         },
         "mandatory": {
           "default": false,

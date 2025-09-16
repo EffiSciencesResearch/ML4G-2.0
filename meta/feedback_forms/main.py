@@ -40,6 +40,7 @@ def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str])
         rating_question = create_scale_question(
             ScaleQuestionConfig(
                 text=f"How would you rate the '{session.name}' session?",
+                description=session.description,
                 low=1,
                 high=5,
                 low_label="Poor",
