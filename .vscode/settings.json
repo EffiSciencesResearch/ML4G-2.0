@@ -1,0 +1,5 @@
+{
+    "yaml.schemas": {
+        "./meta/feedback_forms/config.schema.json": "meta/feedback_forms/config.yaml"
+    }
+}

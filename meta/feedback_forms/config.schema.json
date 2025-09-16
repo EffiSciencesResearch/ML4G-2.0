@@ -1,0 +1,291 @@
+{
+  "$defs": {
+    "ChoiceQuestionConfig": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "mandatory": {
+          "default": false,
+          "title": "Mandatory",
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "choice",
+          "title": "Kind",
+          "type": "string"
+        },
+        "choices": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Choices"
+        }
+      },
+      "required": [
+        "text",
+        "kind"
+      ],
+      "title": "ChoiceQuestionConfig",
+      "type": "object"
+    },
+    "DayConfig": {
+      "properties": {
+        "meme": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Meme"
+        },
+        "sessions": {
+          "items": {
+            "$ref": "#/$defs/SessionConfig"
+          },
+          "title": "Sessions",
+          "type": "array"
+        },
+        "day_questions": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/TextQuestionConfig"
+              },
+              {
+                "$ref": "#/$defs/ParagraphQuestionConfig"
+              },
+              {
+                "$ref": "#/$defs/ScaleQuestionConfig"
+              },
+              {
+                "$ref": "#/$defs/ChoiceQuestionConfig"
+              }
+            ]
+          },
+          "title": "Day Questions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sessions"
+      ],
+      "title": "DayConfig",
+      "type": "object"
+    },
+    "ParagraphQuestionConfig": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "mandatory": {
+          "default": false,
+          "title": "Mandatory",
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "paragraph",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "kind"
+      ],
+      "title": "ParagraphQuestionConfig",
+      "type": "object"
+    },
+    "ScaleQuestionConfig": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "mandatory": {
+          "default": false,
+          "title": "Mandatory",
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "scale",
+          "title": "Kind",
+          "type": "string"
+        },
+        "low": {
+          "default": 1,
+          "title": "Low",
+          "type": "integer"
+        },
+        "high": {
+          "default": 10,
+          "title": "High",
+          "type": "integer"
+        },
+        "low_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Low Label"
+        },
+        "high_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "High Label"
+        }
+      },
+      "required": [
+        "text",
+        "kind"
+      ],
+      "title": "ScaleQuestionConfig",
+      "type": "object"
+    },
+    "SessionConfig": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "reading_group": {
+          "default": false,
+          "title": "Reading Group",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "SessionConfig",
+      "type": "object"
+    },
+    "TextQuestionConfig": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "mandatory": {
+          "default": false,
+          "title": "Mandatory",
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "text",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "kind"
+      ],
+      "title": "TextQuestionConfig",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "camp_name": {
+      "title": "Camp Name",
+      "type": "string"
+    },
+    "drive_folder_id": {
+      "default": "",
+      "title": "Drive Folder Id",
+      "type": "string"
+    },
+    "teachers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Teachers",
+      "type": "array"
+    },
+    "form_description": {
+      "default": "",
+      "title": "Form Description",
+      "type": "string"
+    },
+    "pre_questions": {
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TextQuestionConfig"
+          },
+          {
+            "$ref": "#/$defs/ParagraphQuestionConfig"
+          },
+          {
+            "$ref": "#/$defs/ScaleQuestionConfig"
+          },
+          {
+            "$ref": "#/$defs/ChoiceQuestionConfig"
+          }
+        ]
+      },
+      "title": "Pre Questions",
+      "type": "array"
+    },
+    "timetable": {
+      "additionalProperties": {
+        "$ref": "#/$defs/DayConfig"
+      },
+      "title": "Timetable",
+      "type": "object"
+    },
+    "post_questions": {
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TextQuestionConfig"
+          },
+          {
+            "$ref": "#/$defs/ParagraphQuestionConfig"
+          },
+          {
+            "$ref": "#/$defs/ScaleQuestionConfig"
+          },
+          {
+            "$ref": "#/$defs/ChoiceQuestionConfig"
+          }
+        ]
+      },
+      "title": "Post Questions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "camp_name",
+    "timetable"
+  ],
+  "title": "CampConfig",
+  "type": "object"
+}

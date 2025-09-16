@@ -59,3 +59,18 @@ class CampConfig(BaseModel):
     pre_questions: list[AnyQuestionConfig] = Field(default_factory=list)
     timetable: dict[str, DayConfig]
     post_questions: list[AnyQuestionConfig] = Field(default_factory=list)
+
+
+if __name__ == "__main__":
+    import json
+    from pathlib import Path
+
+    def main():
+        """Generate JSON schema from CampConfig model."""
+        schema = CampConfig.model_json_schema()
+        # a bit weird to have the schema inside the folder, but whatever
+        schema_path = Path(__file__).parent / "config.schema.json"
+        schema_path.write_text(json.dumps(schema, indent=2))
+        print(f"✅ Schema generated at {schema_path}")
+
+    main()
