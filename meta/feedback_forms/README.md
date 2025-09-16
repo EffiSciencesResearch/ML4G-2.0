@@ -100,15 +100,18 @@ day_1:
       mandatory: false
 ```
 
-### Question Types
+### Editor Integration (VSCode)
 
-Available question types:
-- `text`: Short text answer
-- `paragraph`: Long text answer
-- `scale`: 1-5 scale with "Poor" to "Excellent"
-- `scale_1_10`: 1-10 numeric scale
-- `scale_5_point`: 1-5 scale with custom labels
-- `choice`: Multiple choice (radio buttons)
+To get autocompletion and validation for `config.yaml` in VSCode:
+
+1.  **Install the YAML extension**: Install the [YAML extension by Red Hat](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) from the VSCode Marketplace.
+2.  **Reload VSCode**: The schema is already configured in `.vscode/settings.json`.
+
+To regenerate the schema after changing `models.py`, run:
+```bash
+uv run python -m meta.feedback_forms.models
+```
+
 
 ## Usage
 

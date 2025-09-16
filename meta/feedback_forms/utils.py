@@ -7,7 +7,14 @@ import yaml
 import os
 import pickle
 
-from .models import CampConfig, AnyQuestionConfig
+from models import (
+    AnyQuestionConfig,
+    CampConfig,
+    ChoiceQuestionConfig,
+    ParagraphQuestionConfig,
+    ScaleQuestionConfig,
+    TextQuestionConfig,
+)
 
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -161,62 +168,63 @@ def create_image_item_with_url(image_url):
     }
 
 
-def create_text_question(title, required=True):
+def create_text_question(config: TextQuestionConfig):
     """Create a text question item."""
     return {
         "item": {
-            "title": title,
-            "questionItem": {"question": {"textQuestion": {}, "required": required}},
+            "title": config.text,
+            "questionItem": {"question": {"textQuestion": {}, "required": config.mandatory}},
         }
     }
 
 
-def create_paragraph_question(title, required=True):
+def create_paragraph_question(config: ParagraphQuestionConfig):
     """Create a paragraph text question item."""
     return {
         "item": {
-            "title": title,
+            "title": config.text,
             "questionItem": {
-                "question": {"textQuestion": {"paragraph": True}, "required": required}
+                "question": {"textQuestion": {"paragraph": True}, "required": config.mandatory}
             },
         }
     }
 
 
-def create_choice_question(title, options, required=True, question_type="RADIO"):
+def create_choice_question(config: ChoiceQuestionConfig):
     """Create a multiple choice question item."""
+    question_type = "DROP_DOWN" if config.dropdown else "RADIO"
     return {
         "item": {
-            "title": title,
+            "title": config.text,
             "questionItem": {
                 "question": {
                     "choiceQuestion": {
                         "type": question_type,
-                        "options": [{"value": option} for option in options],
+                        "options": [{"value": option} for option in config.choices or []],
                     },
-                    "required": required,
+                    "required": config.mandatory,
                 }
             },
         }
     }
 
 
-def create_scale_question(title, low, high, low_label, high_label, required=True):
+def create_scale_question(config: ScaleQuestionConfig):
     """Create a generic linear scale question."""
     scale_question_payload = {
-        "low": low,
-        "high": high,
+        "low": config.low,
+        "high": config.high,
     }
-    if low_label is not None:
-        scale_question_payload["lowLabel"] = low_label
-    if high_label is not None:
-        scale_question_payload["highLabel"] = high_label
+    if config.low_label is not None:
+        scale_question_payload["lowLabel"] = config.low_label
+    if config.high_label is not None:
+        scale_question_payload["highLabel"] = config.high_label
 
     return {
         "item": {
-            "title": title,
+            "title": config.text,
             "questionItem": {
-                "question": {"scaleQuestion": scale_question_payload, "required": required}
+                "question": {"scaleQuestion": scale_question_payload, "required": config.mandatory}
             },
         }
     }
@@ -235,22 +243,12 @@ def add_questions_to_form(service, form_id, questions):
 
 def create_question_from_config(question_config: AnyQuestionConfig):
     """Create a question item from configuration."""
-    if question_config.kind == "text":
-        return create_text_question(question_config.text, question_config.mandatory)
-    elif question_config.kind == "paragraph":
-        return create_paragraph_question(question_config.text, question_config.mandatory)
-    elif question_config.kind == "choice":
-        return create_choice_question(
-            question_config.text, question_config.choices or [], question_config.mandatory
-        )
-    elif question_config.kind == "scale":
-        return create_scale_question(
-            title=question_config.text,
-            low=question_config.low,
-            high=question_config.high,
-            low_label=question_config.low_label,
-            high_label=question_config.high_label,
-            required=question_config.mandatory,
-        )
-    else:
-        raise ValueError(f"Unknown question kind: {question_config.kind}")
+
+    dispatch = {
+        "text": create_text_question,
+        "paragraph": create_paragraph_question,
+        "choice": create_choice_question,
+        "scale": create_scale_question,
+    }
+
+    return dispatch[question_config.kind](question_config)

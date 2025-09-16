@@ -13,6 +13,7 @@
         },
         "kind": {
           "const": "choice",
+          "default": "choice",
           "title": "Kind",
           "type": "string"
         },
@@ -30,11 +31,15 @@
           ],
           "default": null,
           "title": "Choices"
+        },
+        "dropdown": {
+          "default": false,
+          "title": "Dropdown",
+          "type": "boolean"
         }
       },
       "required": [
-        "text",
-        "kind"
+        "text"
       ],
       "title": "ChoiceQuestionConfig",
       "type": "object"
@@ -100,13 +105,13 @@
         },
         "kind": {
           "const": "paragraph",
+          "default": "paragraph",
           "title": "Kind",
           "type": "string"
         }
       },
       "required": [
-        "text",
-        "kind"
+        "text"
       ],
       "title": "ParagraphQuestionConfig",
       "type": "object"
@@ -124,6 +129,7 @@
         },
         "kind": {
           "const": "scale",
+          "default": "scale",
           "title": "Kind",
           "type": "string"
         },
@@ -163,8 +169,7 @@
         }
       },
       "required": [
-        "text",
-        "kind"
+        "text"
       ],
       "title": "ScaleQuestionConfig",
       "type": "object"
@@ -200,13 +205,13 @@
         },
         "kind": {
           "const": "text",
+          "default": "text",
           "title": "Kind",
           "type": "string"
         }
       },
       "required": [
-        "text",
-        "kind"
+        "text"
       ],
       "title": "TextQuestionConfig",
       "type": "object"

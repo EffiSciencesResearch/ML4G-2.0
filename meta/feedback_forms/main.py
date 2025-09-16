@@ -20,7 +20,15 @@ from utils import (
     create_image_item_with_url,
     move_file_to_folder,
 )
-from .models import DayConfig, CampConfig, SessionConfig
+from models import (
+    CampConfig,
+    ChoiceQuestionConfig,
+    DayConfig,
+    ParagraphQuestionConfig,
+    ScaleQuestionConfig,
+    SessionConfig,
+    TextQuestionConfig,
+)
 
 
 def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str]):
@@ -30,27 +38,34 @@ def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str])
     for session in sessions:
         # Mandatory rating question (1-5 scale)
         rating_question = create_scale_question(
-            title=f"How would you rate the '{session.name}' session?",
-            low=1,
-            high=5,
-            low_label="Poor",
-            high_label="Excellent",
-            required=True,
+            ScaleQuestionConfig(
+                text=f"How would you rate the '{session.name}' session?",
+                low=1,
+                high=5,
+                low_label="Poor",
+                high_label="Excellent",
+                mandatory=True,
+            )
         )
         questions.append(rating_question)
 
         # If it's a reading group, add teacher facilitation question
         if session.reading_group:
             teacher_question = create_choice_question(
-                f"Which teacher facilitated the '{session.name}' reading group?",
-                teachers,
-                required=False,
+                ChoiceQuestionConfig(
+                    text=f"Which teacher facilitated the '{session.name}' reading group?",
+                    choices=teachers,
+                    mandatory=False,
+                )
             )
             questions.append(teacher_question)
 
         # Optional feedback question - USE PARAGRAPH instead of text
         feedback_question = create_paragraph_question(
-            f"Any additional feedback on '{session.name}'?", required=False
+            ParagraphQuestionConfig(
+                text=f"Any additional feedback on '{session.name}'?",
+                mandatory=False,
+            )
         )
         questions.append(feedback_question)
 
@@ -125,7 +140,10 @@ def create_daily_feedback_form(
 
         # Add caption question
         caption_question = create_text_question(
-            "Provide a caption for this meme that describes your day!", required=False
+            TextQuestionConfig(
+                text="Provide a caption for this meme that describes your day!",
+                mandatory=False,
+            )
         )
         all_questions.append(caption_question)
 

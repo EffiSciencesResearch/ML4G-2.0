@@ -12,15 +12,15 @@ class BaseQuestionConfig(BaseModel):
 
 
 class TextQuestionConfig(BaseQuestionConfig):
-    kind: Literal["text"]
+    kind: Literal["text"] = "text"
 
 
 class ParagraphQuestionConfig(BaseQuestionConfig):
-    kind: Literal["paragraph"]
+    kind: Literal["paragraph"] = "paragraph"
 
 
 class ScaleQuestionConfig(BaseQuestionConfig):
-    kind: Literal["scale"]
+    kind: Literal["scale"] = "scale"
     low: int = 1
     high: int = 10
     low_label: str | None = None
@@ -28,8 +28,9 @@ class ScaleQuestionConfig(BaseQuestionConfig):
 
 
 class ChoiceQuestionConfig(BaseQuestionConfig):
-    kind: Literal["choice"]
+    kind: Literal["choice"] = "choice"
     choices: list[str] | None = None
+    dropdown: bool = False
 
 
 AnyQuestionConfig = Union[
@@ -61,6 +62,8 @@ class CampConfig(BaseModel):
     post_questions: list[AnyQuestionConfig] = Field(default_factory=list)
 
 
+# If you modify the models, you can regenerate the schema by running:
+# uv run python models.py
 if __name__ == "__main__":
     import json
     from pathlib import Path
@@ -68,7 +71,6 @@ if __name__ == "__main__":
     def main():
         """Generate JSON schema from CampConfig model."""
         schema = CampConfig.model_json_schema()
-        # a bit weird to have the schema inside the folder, but whatever
         schema_path = Path(__file__).parent / "config.schema.json"
         schema_path.write_text(json.dumps(schema, indent=2))
         print(f"✅ Schema generated at {schema_path}")

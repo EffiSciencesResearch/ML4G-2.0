@@ -27,8 +27,12 @@ form_description: |
 
 pre_questions:
   - text: "Name"
-    kind: "text"
+    kind: "choice"
     mandatory: true
+    dropdown: true
+    choices:
+      - Name 1
+      - Name 2
 
   - text: "What was your highlight of the day?"
     kind: "paragraph"
@@ -41,28 +45,34 @@ pre_questions:
     high_label: "too much"
     mandatory: false
 
+  - text: "How was the food today? (quantity, preferences, ...)"
+    kind: paragraph
+    mandatory: false
+
+
 timetable:
   day_1:
     meme: "drake.png"
     sessions:
-      - name: "Q&A on the prerequisites"
-      - name: "Hyperparameters"
-      - name: "Chapter 1 Capabilities"
+      - name: Opening session
+      - name: Q&A on the prerequisites
+      - name: Hyperparameters
+      - name: Chapter 1 Capabilities
         reading_group: true
-      - name: "Intro to AI Safety"
-      - name: "How to create an AGI?"
-      - name: "Agents"
-      - name: "Group Photo"
-      - name: "Intro to Cursor"
-      - name: "Q&A"
+      - name: How to create an AGI?
+      - name: Agents
+      - name: Intro to Cursor
+    day_questions:
+      - text: "Are you well settled in the venue?"
+        kind: paragraph
 
   day_2:
     meme: "doge.png"
     sessions:
+      - name: "TA inspiration"
       - name: "Adversarial Attacks"
       - name: "Chapter 2 AI Risks"
         reading_group: true
-      - name: "TA inspiration"
       - name: "Transformers"
 
   day_3:
@@ -130,10 +140,10 @@ post_questions:
     kind: "scale"
     mandatory: false
 
-  - text: "What did you learn today, that you definitely want to remember?"
+  - text: "What did you learn today, that you definitely want to remember? (try to make it specific)"
     kind: "text"
     mandatory: false
 
   - text: "Open comments"
-    kind: "text"
+    kind: "paragraph"
     mandatory: false
