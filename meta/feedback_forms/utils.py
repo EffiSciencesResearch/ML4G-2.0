@@ -1,11 +1,13 @@
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import yaml
 import os
 import pickle
+
+from .models import CampConfig, AnyQuestionConfig
 
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,18 +15,29 @@ CREDS_PATH = os.path.join(SCRIPT_DIR, "creds.json")
 TOKEN_PATH = os.path.join(SCRIPT_DIR, "token.pickle")
 SCOPES = [
     "https://www.googleapis.com/auth/forms.body",
-    "https://www.googleapis.com/auth/drive.file"
+    "https://www.googleapis.com/auth/drive.file",
 ]
 
+
 def get_credentials():
-    """Get or refresh credentials, saving them for reuse."""
+    """Get credentials with service account fallback to OAuth2."""
+    # Try service account first if available
+    service_account_path = os.path.join(os.path.dirname(SCRIPT_DIR), "service_account_token.json")
+    if os.path.exists(service_account_path):
+        print("Using service account authentication...")
+        return service_account.Credentials.from_service_account_file(
+            service_account_path, scopes=SCOPES
+        )
+
+    # Fall back to existing OAuth2 flow
+    print("Using OAuth2 authentication...")
     creds = None
-    
+
     # Try to load existing token
     if os.path.exists(TOKEN_PATH):
-        with open(TOKEN_PATH, 'rb') as token:
+        with open(TOKEN_PATH, "rb") as token:
             creds = pickle.load(token)
-    
+
     # If there are no (valid) credentials available, let the user log in
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -34,94 +47,104 @@ def get_credentials():
                 flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
                 creds = flow.run_local_server(port=0)
             except FileNotFoundError:
-                print(f"\n❌ Missing Google OAuth credentials: {CREDS_PATH}")
-                print("\nTo get credentials:")
+                print("\n❌ Missing Google credentials!")
+                print(f"Service account file not found: {service_account_path}")
+                print(f"OAuth2 credentials not found: {CREDS_PATH}")
+                print("\nTo use service account:")
+                print("1. Place service_account_token.json in meta/ directory")
+                print("\nTo use OAuth2:")
                 print("1. Go to https://console.cloud.google.com/apis/credentials")
                 print("2. Create OAuth 2.0 Client ID (Desktop app)")
                 print("3. Download JSON and save as creds.json in meta/feedback_forms/")
                 raise
-        
+
         # Save the credentials for the next run
-        with open(TOKEN_PATH, 'wb') as token:
+        with open(TOKEN_PATH, "wb") as token:
             pickle.dump(creds, token)
-    
+
     return creds
+
 
 def get_forms_service():
     """Authenticate and return Google Forms service."""
     creds = get_credentials()
     return build("forms", "v1", credentials=creds)
 
+
 def get_drive_service():
     """Authenticate and return Google Drive service."""
     creds = get_credentials()
     return build("drive", "v3", credentials=creds)
 
-def load_config(config_path):
-    """Load configuration from YAML file."""
-    with open(config_path, 'r') as file:
-        return yaml.safe_load(file)
+
+def load_config(config_path: str) -> CampConfig:
+    """Load configuration from YAML file and validate with Pydantic."""
+    with open(config_path, "r") as file:
+        config_data = yaml.safe_load(file)
+        return CampConfig.model_validate(config_data)
+
+
+def move_file_to_folder(drive_service, file_id, folder_id):
+    """Move a file to a specific folder in Google Drive."""
+    # Retrieve the file to get its parents
+    file = drive_service.files().get(fileId=file_id, fields="parents").execute()
+    previous_parents = ",".join(file.get("parents"))
+
+    # Move the file to the new folder
+    drive_service.files().update(
+        fileId=file_id, addParents=folder_id, removeParents=previous_parents, fields="id, parents"
+    ).execute()
+
 
 def create_base_form(service, title, description=None):
     """Create a new form with the given title and optional description."""
     # First create the form with just the title
-    form = service.forms().create(body={
-        "info": {
-            "title": title,
-            "documentTitle": title
-        }
-    }).execute()
-    
+    form = service.forms().create(body={"info": {"title": title, "documentTitle": title}}).execute()
+
     form_id = form["formId"]
-    
+
     # If description is provided, add it using batchUpdate
     if description:
         service.forms().batchUpdate(
             formId=form_id,
             body={
-                "requests": [{
-                    "updateFormInfo": {
-                        "info": {
-                            "description": description
-                        },
-                        "updateMask": "description"
+                "requests": [
+                    {
+                        "updateFormInfo": {
+                            "info": {"description": description},
+                            "updateMask": "description",
+                        }
                     }
-                }]
-            }
+                ]
+            },
         ).execute()
-    
+
     return form_id, form
+
 
 def upload_image_to_drive_and_get_url(drive_service, image_path):
     """Upload image to Google Drive and return shareable URL."""
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image file not found: {image_path}")
-    
+
     filename = os.path.basename(image_path)
-    
+
     # Upload file to Drive
     media = MediaFileUpload(image_path, resumable=True)
-    file_metadata = {
-        'name': f"meme_{filename}",
-        'parents': []  # Upload to root folder
-    }
-    
-    file = drive_service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields='id'
-    ).execute()
-    
-    file_id = file.get('id')
-    
+    file_metadata = {"name": f"meme_{filename}", "parents": []}  # Upload to root folder
+
+    file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+
+    file_id = file.get("id")
+
     # Make the file publicly viewable
     drive_service.permissions().create(
-        fileId=file_id,
-        body={'role': 'reader', 'type': 'anyone'}
+        fileId=file_id, body={"role": "reader", "type": "anyone"}
     ).execute()
-    
+
     # Return the direct link to the image
     return f"https://drive.google.com/uc?id={file_id}"
+
 
 def create_image_item_with_url(image_url):
     """Create an image item using Google Drive URL."""
@@ -131,28 +154,22 @@ def create_image_item_with_url(image_url):
             "imageItem": {
                 "image": {
                     "sourceUri": image_url,
-                    "properties": {
-                        "width": 400,
-                        "alignment": "CENTER"
-                    }
+                    "properties": {"width": 400, "alignment": "CENTER"},
                 }
-            }
+            },
         }
     }
+
 
 def create_text_question(title, required=True):
     """Create a text question item."""
     return {
         "item": {
             "title": title,
-            "questionItem": {
-                "question": {
-                    "textQuestion": {},
-                    "required": required
-                }
-            }
+            "questionItem": {"question": {"textQuestion": {}, "required": required}},
         }
     }
+
 
 def create_paragraph_question(title, required=True):
     """Create a paragraph text question item."""
@@ -160,15 +177,11 @@ def create_paragraph_question(title, required=True):
         "item": {
             "title": title,
             "questionItem": {
-                "question": {
-                    "textQuestion": {
-                        "paragraph": True
-                    },
-                    "required": required
-                }
-            }
+                "question": {"textQuestion": {"paragraph": True}, "required": required}
+            },
         }
     }
+
 
 def create_choice_question(title, options, required=True, question_type="RADIO"):
     """Create a multiple choice question item."""
@@ -179,68 +192,35 @@ def create_choice_question(title, options, required=True, question_type="RADIO")
                 "question": {
                     "choiceQuestion": {
                         "type": question_type,
-                        "options": [{"value": option} for option in options]
+                        "options": [{"value": option} for option in options],
                     },
-                    "required": required
+                    "required": required,
                 }
-            }
+            },
         }
     }
 
-def create_scale_question(title, required=True):
-    """Create a 1-5 linear scale question."""
+
+def create_scale_question(title, low, high, low_label, high_label, required=True):
+    """Create a generic linear scale question."""
+    scale_question_payload = {
+        "low": low,
+        "high": high,
+    }
+    if low_label is not None:
+        scale_question_payload["lowLabel"] = low_label
+    if high_label is not None:
+        scale_question_payload["highLabel"] = high_label
+
     return {
         "item": {
             "title": title,
             "questionItem": {
-                "question": {
-                    "scaleQuestion": {
-                        "low": 1,
-                        "high": 5,
-                        "lowLabel": "Poor",
-                        "highLabel": "Excellent"
-                    },
-                    "required": required
-                }
-            }
+                "question": {"scaleQuestion": scale_question_payload, "required": required}
+            },
         }
     }
 
-def create_scale_1_10_question(title, required=True):
-    """Create a 1-10 linear scale question."""
-    return {
-        "item": {
-            "title": title,
-            "questionItem": {
-                "question": {
-                    "scaleQuestion": {
-                        "low": 1,
-                        "high": 10
-                    },
-                    "required": required
-                }
-            }
-        }
-    }
-
-def create_scale_5_point_question(title, scale_left="", scale_right="", required=True):
-    """Create a 1-5 linear scale question with custom labels."""
-    return {
-        "item": {
-            "title": title,
-            "questionItem": {
-                "question": {
-                    "scaleQuestion": {
-                        "low": 1,
-                        "high": 5,
-                        "lowLabel": scale_left,
-                        "highLabel": scale_right
-                    },
-                    "required": required
-                }
-            }
-        }
-    }
 
 def add_questions_to_form(service, form_id, questions):
     """Add a list of questions to a form."""
@@ -248,62 +228,29 @@ def add_questions_to_form(service, form_id, questions):
     for index, question in enumerate(questions):
         question["location"] = {"index": index}
         requests.append({"createItem": question})
-    
+
     if requests:
-        service.forms().batchUpdate(
-            formId=form_id,
-            body={"requests": requests}
-        ).execute()
+        service.forms().batchUpdate(formId=form_id, body={"requests": requests}).execute()
 
-def create_question_from_config(question_config):
+
+def create_question_from_config(question_config: AnyQuestionConfig):
     """Create a question item from configuration."""
-    text = question_config["text"]
-    kind = question_config["kind"]
-    mandatory = question_config.get("mandatory", True)
-    
-    if kind == "text":
-        return create_text_question(text, mandatory)
-    elif kind == "paragraph":
-        return create_paragraph_question(text, mandatory)
-    elif kind == "choice":
-        options = question_config.get("options", [])
-        return create_choice_question(text, options, mandatory)
-    elif kind == "scale":
-        return create_scale_question(text, mandatory)
-    elif kind == "scale_1_10":
-        return create_scale_1_10_question(text, mandatory)
-    elif kind == "scale_5_point":
-        scale_left = question_config.get("scale_left", "")
-        scale_right = question_config.get("scale_right", "")
-        return create_scale_5_point_question(text, scale_left, scale_right, mandatory)
+    if question_config.kind == "text":
+        return create_text_question(question_config.text, question_config.mandatory)
+    elif question_config.kind == "paragraph":
+        return create_paragraph_question(question_config.text, question_config.mandatory)
+    elif question_config.kind == "choice":
+        return create_choice_question(
+            question_config.text, question_config.choices or [], question_config.mandatory
+        )
+    elif question_config.kind == "scale":
+        return create_scale_question(
+            title=question_config.text,
+            low=question_config.low,
+            high=question_config.high,
+            low_label=question_config.low_label,
+            high_label=question_config.high_label,
+            required=question_config.mandatory,
+        )
     else:
-        raise ValueError(f"Unknown question kind: {kind}")
-
-def create_form_shortcut_in_drive(drive_service, form_id, form_title, folder_id):
-    """Create a shortcut to a Google Form in a specific Drive folder.
-    
-    Args:
-        drive_service: Google Drive service instance
-        form_id: The ID of the Google Form
-        form_title: Title for the shortcut
-        folder_id: The Drive folder ID where to create the shortcut
-        
-    Returns:
-        str: The shortcut file ID
-    """
-    shortcut_metadata = {
-        'name': form_title,
-        'mimeType': 'application/vnd.google-apps.shortcut',
-        'shortcutDetails': {
-            'targetId': form_id,
-            'targetMimeType': 'application/vnd.google-apps.form'
-        },
-        'parents': [folder_id]
-    }
-    
-    shortcut = drive_service.files().create(
-        body=shortcut_metadata,
-        fields='id,webViewLink'
-    ).execute()
-    
-    return shortcut.get('id'), shortcut.get('webViewLink') 
+        raise ValueError(f"Unknown question kind: {question_config.kind}")

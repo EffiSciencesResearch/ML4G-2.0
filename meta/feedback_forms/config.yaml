@@ -1,15 +1,15 @@
-camp_name: "ML4good Italy 2025"
+camp_name: "ML4good UK 2025"
 
 # Google Drive folder ID where form shortcuts will be created
 # To get the folder ID: open the folder in Google Drive and copy the ID from the URL
 # Example: https://drive.google.com/drive/folders/1ABC123... → folder ID is "1ABC123..."
-drive_folder_id: "1gDCTVX06vrAaZnb2IxjdxFcu-M-uYLNc"  # Leave empty to skip creating shortcuts
+drive_folder_id: "14poUxnC595SxZyAjMIrG6HRhjyTgfDCN"  # Leave empty to skip creating shortcuts
 
 teachers:
   - "Diego"
-  - "Julian"
-  - "T-bo"
-  - "Linda"
+  - "Rich"
+  - "Elsa"
+  - "Joël"
 
 form_description: |
   The goal of this form is to allow us to improve ML4Good day by day during the camp, and for the next participants. Thank you for all answers and extra comments.
@@ -17,32 +17,33 @@ form_description: |
   More detailed feedback is what helps us the most improve the workshops, both for the other days and the future iterations of the camp. All of it optional, but every bit of information will make someone's life better (yours or future/other participants).
 
   You can add many bullet points, each of them will help us to gradient descent in the right direction. Examples:
-  Not enough talks/guidance
-  Too fast
-  Instructions unclear
-  I'm confused about the material
-  I learned a lot
-  There was too many details
+  - Not enough talks/guidance
+  - Too fast
+  - Instructions unclear
+  - I'm confused about the material
+  - I learned a lot
+  - There was too many details
   (feel free to just copy paste the bullet points that apply!)
 
 pre_questions:
   - text: "Name"
     kind: "text"
     mandatory: true
-  
+
   - text: "What was your highlight of the day?"
     kind: "paragraph"
     mandatory: false
-  
+
   - text: "What do you think about the amount of content we had today?"
-    kind: "scale_5_point"
-    scale_left: "too little"
-    scale_right: "too much"
+    kind: "scale"
+    high: 5
+    low_label: "too little"
+    high_label: "too much"
     mandatory: false
 
 timetable:
   day_1:
-    meme: "doge.png"
+    meme: "drake.png"
     sessions:
       - name: "Q&A on the prerequisites"
       - name: "Hyperparameters"
@@ -54,9 +55,9 @@ timetable:
       - name: "Group Photo"
       - name: "Intro to Cursor"
       - name: "Q&A"
-  
+
   day_2:
-    meme: "drake.png"
+    meme: "doge.png"
     sessions:
       - name: "Adversarial Attacks"
       - name: "Chapter 2 AI Risks"
@@ -87,7 +88,7 @@ timetable:
         kind: "paragraph"
         mandatory: false
       - text: "How confident do you feel about your literature review project?"
-        kind: "scale_1_10"
+        kind: "scale"
         mandatory: false
 
   day_5:
@@ -122,17 +123,17 @@ timetable:
 
 post_questions:
   - text: "Overall Experience: How would you rate your overall experience of the past 24 hours?"
-    kind: "scale_1_10"
+    kind: "scale"
     mandatory: false
-  
+
   - text: "How are your energy levels?"
-    kind: "scale_1_10"
+    kind: "scale"
     mandatory: false
-  
+
   - text: "What did you learn today, that you definitely want to remember?"
     kind: "text"
     mandatory: false
-  
+
   - text: "Open comments"
     kind: "text"
-    mandatory: false 
+    mandatory: false

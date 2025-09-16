@@ -21,16 +21,13 @@ This tool automatically creates daily feedback forms for ML4Good camps using the
 ### 1. Install Dependencies
 
 ```bash
-# Create virtual environment with Python 3.11
-uv venv --python 3.11
+# Install all dependencies
+uv sync
 
 # Activate the environment
 source .venv/bin/activate  # On macOS/Linux
 # or
 .venv\Scripts\activate  # On Windows
-
-# Install all dependencies
-uv sync
 ```
 
 ### 2. Set Up Google OAuth Credentials
@@ -161,4 +158,4 @@ meta/feedback_forms/
 To add new question types or features:
 1. Add the question creation function in `utils.py`
 2. Update `create_question_from_config()` to handle the new type
-3. Document the new type in this README 
+3. Document the new type in this README
