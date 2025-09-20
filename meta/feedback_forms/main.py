@@ -45,7 +45,6 @@ def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str])
                 high=5,
                 low_label="Poor",
                 high_label="Excellent",
-                mandatory=True,
             )
         )
         questions.append(rating_question)
