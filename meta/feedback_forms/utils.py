@@ -103,6 +103,66 @@ def move_file_to_folder(drive_service, file_id, folder_id):
     ).execute()
 
 
+def copy_folder_permissions_to_file(drive_service, folder_id, file_id):
+    """Copy all permissions from a folder to a file."""
+    try:
+        # First verify the folder exists and we have access
+        try:
+            folder_info = drive_service.files().get(fileId=folder_id, fields="id,name,mimeType").execute()
+            if folder_info.get('mimeType') != 'application/vnd.google-apps.folder':
+                print(f"  ⚠ Warning: {folder_id} is not a folder (it's a {folder_info.get('mimeType', 'unknown type')})")
+        except Exception as e:
+            print(f"  ⚠ Cannot access folder {folder_id}: {e}")
+            print("  💡 Please check:")
+            print("     - The folder ID is correct")
+            print("     - Your account has access to the folder") 
+            print("     - The folder exists")
+            return
+        
+        # Get permissions from the folder
+        folder_permissions = drive_service.permissions().list(
+            fileId=folder_id, fields="permissions(id,type,role,emailAddress,domain)"
+        ).execute()
+        
+        permissions = folder_permissions.get('permissions', [])
+        
+        # Skip the owner permission (it's automatically set and can't be duplicated)
+        permissions_to_copy = [p for p in permissions if p.get('role') != 'owner']
+        
+        print(f"  Copying {len(permissions_to_copy)} permissions from folder to form...")
+        
+        for permission in permissions_to_copy:
+            try:
+                # Create the permission body, excluding the ID field
+                permission_body = {
+                    'type': permission['type'],
+                    'role': permission['role']
+                }
+                
+                # Add email or domain based on permission type
+                if permission['type'] == 'user' and 'emailAddress' in permission:
+                    permission_body['emailAddress'] = permission['emailAddress']
+                elif permission['type'] == 'domain' and 'domain' in permission:
+                    permission_body['domain'] = permission['domain']
+                
+                # Apply the permission to the file
+                drive_service.permissions().create(
+                    fileId=file_id,
+                    body=permission_body,
+                    fields="id"
+                ).execute()
+                
+            except Exception as e:
+                # Some permissions might fail (e.g., already exists, invalid), but continue with others
+                print(f"    ⚠ Failed to copy permission {permission.get('type', 'unknown')}: {e}")
+                
+        print("  ✓ Folder permissions copied to form")
+        
+    except Exception as e:
+        print(f"  ⚠ Failed to copy folder permissions: {e}")
+        # Don't re-raise since this is not a critical failure
+
+
 def create_base_form(service, title, description=None):
     """Create a new form with the given title and optional description."""
     # First create the form with just the title
@@ -234,6 +294,46 @@ def create_scale_question(config: ScaleQuestionConfig):
     }
 
 
+def create_scale_5_point_question(config):
+    """Create a 5-point linear scale question."""
+    scale_question_payload = {
+        "low": 1,
+        "high": 5,
+    }
+    if config.scale_left is not None:
+        scale_question_payload["lowLabel"] = config.scale_left
+    if config.scale_right is not None:
+        scale_question_payload["highLabel"] = config.scale_right
+
+    return {
+        "item": {
+            "title": config.text,
+            "description": config.description,
+            "questionItem": {
+                "question": {"scaleQuestion": scale_question_payload, "required": config.mandatory}
+            },
+        }
+    }
+
+
+def create_scale_1_to_10_question(config):
+    """Create a 1-10 linear scale question."""
+    scale_question_payload = {
+        "low": 1,
+        "high": 10,
+    }
+
+    return {
+        "item": {
+            "title": config.text,
+            "description": config.description,
+            "questionItem": {
+                "question": {"scaleQuestion": scale_question_payload, "required": config.mandatory}
+            },
+        }
+    }
+
+
 def add_questions_to_form(service, form_id, questions):
     """Add a list of questions to a form."""
     requests = []
@@ -253,6 +353,8 @@ def create_question_from_config(question_config: AnyQuestionConfig):
         "paragraph": create_paragraph_question,
         "choice": create_choice_question,
         "scale": create_scale_question,
+        "scale_5_point": create_scale_5_point_question,
+        "scale_1_10": create_scale_1_to_10_question,
     }
 
     return dispatch[question_config.kind](question_config)
