@@ -19,6 +19,7 @@ from utils import (
     upload_image_to_drive_and_get_url,
     create_image_item_with_url,
     move_file_to_folder,
+    copy_folder_permissions_to_file,
 )
 from models import (
     CampConfig,
@@ -26,6 +27,8 @@ from models import (
     DayConfig,
     ParagraphQuestionConfig,
     ScaleQuestionConfig,
+    Scale5PointQuestionConfig,
+    Scale1To10QuestionConfig,
     SessionConfig,
     TextQuestionConfig,
 )
@@ -96,6 +99,13 @@ def create_daily_feedback_form(
             print("  ✓ Form moved to Drive folder")
         except Exception as e:
             print(f"  ⚠ Failed to move form to Drive folder: {e}")
+
+    # Copy folder permissions to the form if enabled
+    if config.drive_folder_id and config.inherit_folder_permissions:
+        try:
+            copy_folder_permissions_to_file(drive_service, config.drive_folder_id, form_id)
+        except Exception as e:
+            print(f"  ⚠ Failed to copy folder permissions to form: {e}")
 
     # Prepare all questions
     all_questions = []
