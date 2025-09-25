@@ -1,6 +1,6 @@
 # ML4G
 
-This repo contains the instructions for the ML for Good bootcamp, for students and researchers interested in AI safety.
+This repo contains the instructions for the ML4Good bootcamp, for students and researchers interested in AI safety.
 
 The program is aimed at beginners in machine learning, but is quite ambitious, and we hope that even advanced students will enjoy participating in this program.
 
