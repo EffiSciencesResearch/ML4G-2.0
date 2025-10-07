@@ -48,6 +48,7 @@ dependencies = [
     "pydantic>=2.10.0",
     "joblib>=1.4.2",
     "streamlit-product-card>=1.0.0",
+    "slack-sdk>=3.36.0",
 ]
 
 [dependency-groups]
