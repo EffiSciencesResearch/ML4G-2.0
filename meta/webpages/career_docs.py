@@ -35,7 +35,7 @@ Demis,demis@deepmind.google
 
 participants = st.text_area(
     "Participants name and email CSV - temporary override",
-    value=camp.participants_name_and_email_csv,
+    value=camp.participants_name_and_email_csv if camp else "",
     placeholder="name,email\njack,jack@ml4good.org\njulia,julia@ml4bad.com",
     help="CSV with columns 'name' and 'email'.",
     height=200,
@@ -50,7 +50,11 @@ folder_url = st.text_input(
 )
 
 
-if not template_url or not folder_url:
+if not camp:
+    # One needs to be logged in, otherwise they can abuse our bot's ability
+    # to create and share documents.
+    st.stop()
+if not template_url or not folder_url or not participants:
     st.stop()
 
 
@@ -88,12 +92,12 @@ ok &= st.checkbox(
 ok &= st.checkbox("The folder for 1-1 docs gives write access to the bot.")
 st.write(f"Bot email: `{BOT_EMAIL}`")
 ok &= st.checkbox(
+    f"The template contains the placeholder `{to_replace}`, precisely and not something else."
+)
+ok &= st.checkbox(
     f"The filename `{doc_name}` contains `{to_replace}`.",
     value=to_replace in doc_name,
     disabled=True,
-)
-ok &= st.checkbox(
-    f"The template contains the placeholder `{to_replace}`, precisely and not something else."
 )
 
 if st.button(

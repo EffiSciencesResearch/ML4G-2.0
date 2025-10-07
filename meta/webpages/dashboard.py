@@ -29,16 +29,6 @@ Enjoy! :rocket:
 """
 )
 
-
-if not state.current_camp:
-    st.write("## 👈🏻 Start by selecting a camp on the left sidebar")
-    st.write(
-        "On a small screen the sidebar might be collapsed, but you'll find a `>` button to expand it on the top right. "
-        "If you're an organiser/teacher/TA, a password should have been given to you by the main camp organizer, if not, contact them."
-    )
-    st.stop()
-
-
 st.subheader("Most useful tools")
 cols = st.columns(3)
 tools = [
@@ -61,3 +51,11 @@ for i, (page, icon, description) in enumerate(tools):
         )
         if was_clicked:
             st.switch_page(page)
+
+
+if not state.current_camp:
+    st.write("## 👈🏻 Start by selecting a camp on the left sidebar")
+    st.write(
+        "On a small screen the sidebar might be collapsed, but you'll find a `>` button to expand it on the top right. "
+        "If you're an organiser/teacher/TA, a password should have been given to you by the main camp organizer, if not, contact them."
+    )
