@@ -2,7 +2,7 @@ import streamlit as st
 import dotenv
 from streamlit_product_card import product_card
 
-from utils.streamlit_utils import State
+from utils.streamlit_utils import State, render_select_camp_message
 
 dotenv.load_dotenv()
 
@@ -54,8 +54,4 @@ for i, (page, icon, description) in enumerate(tools):
 
 
 if not state.current_camp:
-    st.write("## 👈🏻 Start by selecting a camp on the left sidebar")
-    st.write(
-        "On a small screen the sidebar might be collapsed, but you'll find a `>` button to expand it on the top right. "
-        "If you're an organiser/teacher/TA, a password should have been given to you by the main camp organizer, if not, contact them."
-    )
+    render_select_camp_message()

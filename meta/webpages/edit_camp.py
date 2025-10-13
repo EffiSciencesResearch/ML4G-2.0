@@ -3,7 +3,7 @@ import streamlit as st
 from utils.openai_utils import ServiceAccount
 from utils.camp_utils import get_current_camp, edit_current_camp
 import datetime
-from utils.streamlit_utils import State
+from utils.streamlit_utils import State, render_select_camp_message
 from openai import OpenAI
 from litellm import model_cost
 
@@ -13,9 +13,10 @@ with st.sidebar:
     state.login_form()
 
 
+st.title("Edit Camp details")
 camp = get_current_camp()
 if not camp:
-    st.error("Please select a camp first on the main page.")
+    render_select_camp_message()
     st.stop()
 
 st.write(f"## Currently editing camp `{camp.name}`")

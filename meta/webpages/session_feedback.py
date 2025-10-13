@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from utils.camp_utils import get_current_camp
 from utils.google_utils import SimpleGoogleAPI
 from utils.feedback_utils import FeedbackParser
-from utils.streamlit_utils import State
+from utils.streamlit_utils import State, render_select_camp_message
 
 # Expected column header patterns
 RATING_PATTERN = r"How would you rate the '([^']+)'"
@@ -614,13 +614,11 @@ def main():
     with st.sidebar:
         state.login_form()
 
-    # Get current camp
+    st.title("📊 Session Feedback Analysis")
     camp = get_current_camp()
     if not camp:
-        st.error("Please select a camp first on the main page.")
+        render_select_camp_message()
         st.stop()
-
-    st.title("📊 Session Feedback Analysis")
 
     st.markdown(
         f"""

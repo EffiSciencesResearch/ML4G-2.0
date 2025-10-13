@@ -135,3 +135,11 @@ class State:
         else:
             st.error("Invalid password")
             return None
+
+
+def render_select_camp_message():
+    st.write("## 👈 Please select a camp on the left sidebar to continue.")
+    st.write(
+        "On a small screen the sidebar might be collapsed, but you'll find a `>` button to expand it on the top right. "
+        "If you're an organiser/teacher/TA, a password should have been given to you by the main camp organizer, if not, contact them."
+    )
