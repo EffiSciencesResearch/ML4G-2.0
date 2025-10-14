@@ -56,7 +56,7 @@ def notebook_to_str(notebook: Notebook) -> str:
 
 def save_notebook(file: Path, notebook: Notebook):
     """Save the notebook to the given file."""
-    file.write_text(notebook_to_str(notebook), encoding='utf-8')
+    file.write_text(notebook_to_str(notebook), encoding="utf-8")
 
 
 def load_notebook(file: Path) -> Notebook:
@@ -392,7 +392,7 @@ def neat(files: list[Path], clean: bool = True, badge: bool = True, fmt: bool = 
         if notebook == initial:
             print(f"🌟 {file} already neat")
         else:
-            file.write_text(notebook_to_str(notebook), encoding='utf-8')
+            file.write_text(notebook_to_str(notebook), encoding="utf-8")
 
 
 @app.command()
@@ -436,7 +436,7 @@ def badge(files: list[Path]):
         if notebook == with_badge:
             print(f"✅ {file} already has a badge.{details}")
         else:
-            file.write_text(notebook_to_str(with_badge), encoding='utf-8')
+            file.write_text(notebook_to_str(with_badge), encoding="utf-8")
             print(f"🖊  {file} now has a badge!{details}")
 
 
@@ -454,7 +454,7 @@ def sync(files: list[Path]):
             if notebook_matches_file(new_notebook, out_path):
                 print(f"✅ {out_path} already up-to-date")
             else:
-                out_path.write_text(notebook_to_str(new_notebook), encoding='utf-8')
+                out_path.write_text(notebook_to_str(new_notebook), encoding="utf-8")
                 print(f"📝 {out_path} generated")
 
 
@@ -465,7 +465,7 @@ def clean(files: list[Path]):
     for file in gather_ipynbs(files):
         notebook = load_notebook(file)
         notebook = clean_notebook(notebook)
-        file.write_text(notebook_to_str(notebook), encoding='utf-8')
+        file.write_text(notebook_to_str(notebook), encoding="utf-8")
 
 
 @app.command()
@@ -506,7 +506,7 @@ def list_of_workshops_readme():
 
     content += end
 
-    readme.write_text(content, encoding='utf-8')
+    readme.write_text(content, encoding="utf-8")
 
 
 def fix_typos_lines(lines: list[str]):
@@ -682,7 +682,7 @@ def fix_typos(file: Path, code_too: bool = False, select_cells: bool = False):
 
         cell["source"] = new.splitlines(keepends=True)
 
-    file.write_text(json.dumps(notebook, indent=4) + "\n", encoding='utf-8')
+    file.write_text(json.dumps(notebook, indent=4) + "\n", encoding="utf-8")
     print("✅ Saved!")
 
 
@@ -739,6 +739,41 @@ def one_on_ones(
         print(person, *matches, sep=",")
 
 
+def validate_make_pairing_graph_inputs(
+    names: list[str],
+    rounds: int,
+    preferences: dict[tuple[str, str], int],
+    ta_group: set[str],
+) -> list[str]:
+    errors = []
+    for pair in preferences.keys():
+        if pair[0] not in names:
+            errors.append(f"Pair {pair} contains a name not in the names list: {pair[0]}")
+        if pair[1] not in names:
+            errors.append(f"Pair {pair} contains a name not in the names list: {pair[1]}")
+
+    for name in set(names):
+        count = names.count(name)
+        if count > 1:
+            errors.append(f"Name {name} appears {count} times in the names list")
+
+    for pair in preferences.keys():
+        if len(pair) != 2:
+            errors.append(f"Preference pair {pair} is not a pair")
+
+    for name in ta_group:
+        if name not in names:
+            errors.append(f"TA name {name} is not in the names list")
+
+    for a, b in preferences:
+        if (b, a) in preferences and preferences[b, a] != preferences[a, b]:
+            errors.append(
+                f"Preference {a, b} is not symmetric: {preferences[a, b]} != {preferences[b, a]}"
+            )
+
+    return errors
+
+
 def make_pairing_graph(
     # names: list[str], rounds: int, forced_pairs: list[tuple[str, str]]
     names: list[str],
@@ -784,10 +819,9 @@ def make_pairing_graph(
         And we rotate who is not paired with anyone.
     """
 
-    assert all(name in names for pair in preferences.keys() for name in pair)
-    assert len(names) == len(set(names)), "Names must be unique"
-    assert all(len(pair) == 2 for pair in preferences.keys()), "Preference pairs must be pairs"
-    assert all(name in names for name in ta_group), "TA names must be in the names list"
+    errors = validate_make_pairing_graph_inputs(names, rounds, preferences, ta_group)
+    if errors:
+        raise ValueError("\n".join(errors))
 
     import networkx as nx
 

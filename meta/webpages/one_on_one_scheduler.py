@@ -1,5 +1,5 @@
 from utils.streamlit_utils import State
-from tools import make_pairing_graph
+from tools import make_pairing_graph, validate_make_pairing_graph_inputs
 
 import streamlit as st
 import pandas as pd
@@ -22,8 +22,10 @@ Rules:
     - Participants will meet with TAs only when all other participants have met with a TA as much as them
     - TAs will not be paired with each other
 - Preferences can be added to ensure a pair can meet early, or never meets.
+- You can also preset the initial rounds if some rounds have already happened but you want to edit future ones or add constraints
 """
 )
+
 
 # Input section
 if camp:
@@ -74,6 +76,52 @@ with against_col:
         height=300,
     )
 
+preset_rounds_enabled = st.checkbox("Preset initial rounds")
+if preset_rounds_enabled:
+    st.write(
+        "Paste here a CSV or TSV that you can copy directly from a Google Sheet or the output of this program. This will fix the first rounds."
+    )
+    DELIMITERS = {"\t": "tab", ",": "comma"}
+    delimiter = st.radio(
+        "Delimiter", DELIMITERS, index=0, format_func=lambda x: DELIMITERS[x], horizontal=True
+    )
+    preset_rounds_text = st.text_area(
+        "Preset Rounds (CSV format)",
+        help="Paste CSV data here. The first column must be 'Participant', followed by columns for each round (e.g., 'Round 1').",
+        height=300,
+    )
+else:
+    preset_rounds_text = ""
+
+if preset_rounds_text:
+    preset_df = pd.read_csv(StringIO(preset_rounds_text), delimiter=delimiter)
+
+    pairs_not_to_match = set()
+    for _, row in preset_df.iterrows():
+        name = row[preset_df.columns[0]]
+        for col in preset_df.columns[1:]:
+            if row[col] != "-":
+                pairs_not_to_match.add((name, row[col]))
+    preset_rounds = len(preset_df.columns) - 1
+
+    # Check that presets have the same rows (1 row = one person, 1 col = one meeting) as names
+    preset_df_names = list(preset_df[preset_df.columns[0]])
+    if len(preset_df_names) != len(set(preset_df_names)):
+        st.error(
+            f"Preset has duplicated names: {[name for name in preset_df_names if preset_df_names.count(name) > 1]}"
+        )
+        st.stop()
+
+    if set(preset_df_names) != set(names):
+        st.error(
+            f"Preset rounds have different names than the participants list: \nextra: {set(preset_df_names) - set(names)}\nmissing: {set(names) - set(preset_df_names)}"
+        )
+        st.stop()
+else:
+    preset_df = None
+    preset_rounds = 0
+    pairs_not_to_match = set()
+
 names = names + tas
 
 
@@ -106,7 +154,22 @@ for pref in preferences_text.splitlines():
 for against in against_text.splitlines():
     p1, p2 = is_valid_pair_line(against)
     if p1 is not None:
+        if p1 > p2:
+            p1, p2 = p2, p1
         preferences[p1, p2] = 0
+
+# Add preset pairs to the 'against' list to avoid re-pairing them
+for p1, p2 in pairs_not_to_match:
+    if p1 > p2:
+        p1, p2 = p2, p1
+    preferences[p1, p2] = 0
+
+rounds_to_generate = rounds - preset_rounds
+
+errors = validate_make_pairing_graph_inputs(names, rounds_to_generate, preferences, set(tas))
+if errors:
+    st.error("\n- ".join(errors))
+    st.stop()
 
 # Processing and results display
 if st.button("Try to generate schedule"):
@@ -126,8 +189,8 @@ if st.button("Try to generate schedule"):
     with st.spinner(f"Generating schedule (up to {tries} attempts)..."):
         for i in range(tries):
             try:
-                all_pairings = make_pairing_graph(names, rounds, preferences, set(tas))
-                st.success(f"Found a solution after {i+1} attempts!")
+                all_pairings = make_pairing_graph(names, rounds_to_generate, preferences, set(tas))
+                st.success(f"Found a solution after {i + 1} attempts!")
                 break
             except KeyError:
                 continue
@@ -137,10 +200,22 @@ if st.button("Try to generate schedule"):
             )
             st.stop()
 
+    # Add the preset to all_pairings
+    if preset_df is not None:
+        for person, new_pairings in all_pairings.items():
+            # Find the corresponding row in preset_df
+            for index, row in preset_df.iterrows():
+                if row.iloc[0] == person:
+                    all_pairings[person] = list(row)[1:] + new_pairings
+                    break
+
+            else:
+                st.error(f"Person {person} not found in preset dataframe")
+                st.stop()
+
     # Display results if successful
     # Create a DataFrame for display
     df = pd.DataFrame.from_dict(all_pairings, orient="index")
-    df.columns = [f"Round {i+1}" for i in range(rounds)]
 
     st.subheader("Schedule")
     st.dataframe(df)
