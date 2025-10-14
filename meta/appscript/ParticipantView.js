@@ -12,21 +12,55 @@ function createParticipantViewFromActiveSheet() {
     return;
   }
 
-  const sourceSheetName = sourceSheet.getName();
-  const targetSheetName = `${sourceSheetName} - participants`;
+  // 1. Find the cell with "Participant View Sheet: <URL>"
+  const dataRange = sourceSheet.getDataRange();
+  const values = dataRange.getValues();
+  let targetUrl = null;
+  const searchString = "Participant View Sheet:";
 
-  // Remove old summary sheet if it exists, then create a new one
-  let targetSheet = ss.getSheetByName(targetSheetName);
-  if (targetSheet) {
-    ss.deleteSheet(targetSheet);
+  for (let i = 0; i < values.length; i++) {
+    for (let j = 0; j < values[i].length; j++) {
+      if (typeof values[i][j] === 'string' && values[i][j].includes(searchString)) {
+        targetUrl = values[i][j].substring(values[i][j].indexOf(searchString) + searchString.length).trim();
+        break;
+      }
+    }
+    if (targetUrl) {
+      break;
+    }
   }
-  targetSheet = ss.insertSheet(targetSheetName, ss.getSheets().length); // Insert as the last sheet
+
+  if (!targetUrl) {
+    SpreadsheetApp.getUi().alert(`Could not find a cell in sheet '${sourceSheet.getName()}' containing '${searchString} <URL>'.`);
+    return;
+  }
+
+  let targetSpreadsheet;
+  try {
+    targetSpreadsheet = SpreadsheetApp.openByUrl(targetUrl);
+  } catch (e) {
+    SpreadsheetApp.getUi().alert("Failed to open the target spreadsheet. Please check the URL and permissions.\nError: " + e.message);
+    return;
+  }
+
+  const sourceSheetName = sourceSheet.getName();
+
+  // Remove old summary sheet if it exists
+  let existingTargetSheet = targetSpreadsheet.getSheetByName(sourceSheetName);
+  if (existingTargetSheet) {
+    targetSpreadsheet.deleteSheet(existingTargetSheet);
+  }
+
+  // Copy the entire sheet to the target spreadsheet
+  const targetSheet = sourceSheet.copyTo(targetSpreadsheet);
+  targetSheet.setName(sourceSheetName);
+
 
   const headerRow = 1;
   const lastSourceColumn = sourceSheet.getLastColumn();
   const columnsToCopyIndices = []; // Will store 1-based indices of columns to copy
 
-  // 1. Identify columns with bold headers
+  // 2. Identify columns with bold headers
   if (lastSourceColumn > 0) {
     const headerRange = sourceSheet.getRange(headerRow, 1, 1, lastSourceColumn);
     const fontWeights = headerRange.getFontWeights()[0]; // getFontWeights returns 2D array, we need the first row
@@ -40,38 +74,24 @@ function createParticipantViewFromActiveSheet() {
 
   if (columnsToCopyIndices.length === 0) {
     SpreadsheetApp.getUi().alert("No columns with bold headers found in the active sheet.");
+    targetSheet.clear(); // Clear the copied sheet
     targetSheet.getRange("A1").setValue("No columns with bold headers found in '" + sourceSheetName + "'.");
     return;
   }
 
-  // 2. Copy identified columns
-  let currentTargetColumnIndex = 1; // Start pasting into column A (index 1) of the target sheet
-
-  columnsToCopyIndices.forEach(sourceColIndex => {
-    // Determine the last row with content in this specific source column
-    let lastRowInSourceColumn = sourceSheet.getMaxRows(); // Start with max rows
-    const columnValues = sourceSheet.getRange(1, sourceColIndex, sourceSheet.getMaxRows(), 1).getValues();
-    for (let r = columnValues.length - 1; r >= 0; r--) {
-      if (columnValues[r][0] !== "") {
-        lastRowInSourceColumn = r + 1;
-        break;
-      }
+  // 3. Delete columns that are NOT in columnsToCopyIndices from the new sheet
+  const lastTargetColumn = targetSheet.getLastColumn();
+  const columnsToDelete = [];
+  for (let i = 1; i <= lastTargetColumn; i++) {
+    if (columnsToCopyIndices.indexOf(i) === -1) {
+      columnsToDelete.push(i);
     }
-    if (lastRowInSourceColumn === 0 && sourceSheet.getMaxRows() > 0) lastRowInSourceColumn = 1; // At least copy the header if column is truly empty
+  }
 
+  // Delete from right to left to avoid index shifting
+  for (let i = columnsToDelete.length - 1; i >= 0; i--) {
+    targetSheet.deleteColumn(columnsToDelete[i]);
+  }
 
-    const sourceRange = sourceSheet.getRange(1, sourceColIndex, lastRowInSourceColumn, 1); // (startRow, startCol, numRows, numCols)
-    const targetCell = targetSheet.getRange(1, currentTargetColumnIndex); // Top-left cell of the target column
-
-    // PASTE_NORMAL copies values, formatting, data validation, merged cells, etc.
-    sourceRange.copyTo(targetCell, SpreadsheetApp.CopyPasteType.PASTE_NORMAL, false);
-
-    // Optional: Adjust column width in target sheet to match source
-    const sourceColumnWidth = sourceSheet.getColumnWidth(sourceColIndex);
-    targetSheet.setColumnWidth(currentTargetColumnIndex, sourceColumnWidth);
-
-    currentTargetColumnIndex++;
-  });
-
-  SpreadsheetApp.getUi().alert(`Sheet "${targetSheetName}" created/updated successfully with ${columnsToCopyIndices.length} columns!`);
+  SpreadsheetApp.getUi().alert(`Sheet "${sourceSheetName}" in spreadsheet "${targetSpreadsheet.getName()}" created/updated successfully with ${columnsToCopyIndices.length} columns!`);
 }
