@@ -45,14 +45,17 @@ function createParticipantViewFromActiveSheet() {
 
   const sourceSheetName = sourceSheet.getName();
 
-  // Remove old summary sheet if it exists
+  // Copy the sheet first. This ensures that even if we are replacing the *only*
+  // sheet in the target, we won't fail by trying to delete the last sheet.
+  const targetSheet = sourceSheet.copyTo(targetSpreadsheet);
+
+  // Remove the old version of the sheet if it exists.
   let existingTargetSheet = targetSpreadsheet.getSheetByName(sourceSheetName);
   if (existingTargetSheet) {
     targetSpreadsheet.deleteSheet(existingTargetSheet);
   }
 
-  // Copy the entire sheet to the target spreadsheet
-  const targetSheet = sourceSheet.copyTo(targetSpreadsheet);
+  // Rename the newly copied sheet to the correct name.
   targetSheet.setName(sourceSheetName);
 
 
@@ -88,10 +91,28 @@ function createParticipantViewFromActiveSheet() {
     }
   }
 
-  // Delete from right to left to avoid index shifting
-  for (let i = columnsToDelete.length - 1; i >= 0; i--) {
-    targetSheet.deleteColumn(columnsToDelete[i]);
+  // To speed up the process, we group contiguous columns and delete them in batches.
+  // We iterate from right to left to avoid shifting the indices of columns we still need to process.
+  if (columnsToDelete.length > 0) {
+    let i = columnsToDelete.length - 1;
+    while (i >= 0) {
+      let count = 1;
+      let startColumn = columnsToDelete[i];
+      // Find how many contiguous columns there are to delete from this point to the left.
+      while (i > 0 && columnsToDelete[i - 1] === startColumn - 1) {
+        count++;
+        startColumn--;
+        i--;
+      }
+      targetSheet.deleteColumns(startColumn, count);
+      i--;
+    }
   }
+
+  // Protect the sheet to prevent accidental edits
+  const protection = targetSheet.protect();
+  protection.setDescription('This sheet is automatically generated. Please edit the source sheet, and rerun the script to update.');
+  protection.setWarningOnly(true);
 
   SpreadsheetApp.getUi().alert(`Sheet "${sourceSheetName}" in spreadsheet "${targetSpreadsheet.getName()}" created/updated successfully with ${columnsToCopyIndices.length} columns!`);
 }
