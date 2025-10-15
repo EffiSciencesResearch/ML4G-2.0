@@ -30,33 +30,61 @@ function createParticipantViewFromActiveSheet() {
     }
   }
 
-  if (!targetUrl) {
-    SpreadsheetApp.getUi().alert(`Could not find a cell in sheet '${sourceSheet.getName()}' containing '${searchString} <URL>'.`);
-    return;
+  let targetSpreadsheet;
+  const ui = SpreadsheetApp.getUi();
+  let targetSheetName = null;
+
+  if (targetUrl) {
+    try {
+      targetSheetName = SpreadsheetApp.openByUrl(targetUrl).getName();
+    } catch (e) {
+      ui.alert(`Failed to open the target spreadsheet URL: ${targetUrl}\n\nPlease check the URL and permissions.\nError: ${e.message}\n\nThe script will now proceed as if no target URL was found.`);
+      targetUrl = null;
+    }
   }
 
-  let targetSpreadsheet;
-  try {
-    targetSpreadsheet = SpreadsheetApp.openByUrl(targetUrl);
-  } catch (e) {
-    SpreadsheetApp.getUi().alert("Failed to open the target spreadsheet. Please check the URL and permissions.\nError: " + e.message);
-    return;
+  if (targetUrl && targetSheetName) {
+    const title = 'Select Output Destination';
+    const prompt = `A target spreadsheet was found:\n"${targetSheetName}"\n\nDo you want to update it?\n\n- Click YES to update the target.\n- Click NO to create a new tab in this spreadsheet.`;
+    const response = ui.alert(title, prompt, ui.ButtonSet.YES_NO_CANCEL);
+
+    if (response === ui.Button.YES) {
+      targetSpreadsheet = SpreadsheetApp.openByUrl(targetUrl);
+    } else if (response === ui.Button.NO) {
+      targetSpreadsheet = ss;
+    } else {
+      return; // User cancelled
+    }
+  } else {
+    const title = 'Select Output Destination';
+    const prompt = 'No target URL found.\nTo specify a target, add a cell containing exactly "Participant View Sheet: https://..."\n\nDo you want to create the participant view in a new tab in the current spreadsheet?';
+    const response = ui.alert(title, prompt, ui.ButtonSet.OK_CANCEL);
+
+    if (response === ui.Button.OK) {
+      targetSpreadsheet = ss;
+    } else {
+      return; // User cancelled
+    }
   }
 
   const sourceSheetName = sourceSheet.getName();
+  let finalSheetName = sourceSheetName;
+  if (targetSpreadsheet.getId() === ss.getId()) {
+    finalSheetName = sourceSheetName + " - Participant View";
+  }
 
   // Copy the sheet first. This ensures that even if we are replacing the *only*
   // sheet in the target, we won't fail by trying to delete the last sheet.
   const targetSheet = sourceSheet.copyTo(targetSpreadsheet);
 
   // Remove the old version of the sheet if it exists.
-  let existingTargetSheet = targetSpreadsheet.getSheetByName(sourceSheetName);
+  let existingTargetSheet = targetSpreadsheet.getSheetByName(finalSheetName);
   if (existingTargetSheet) {
     targetSpreadsheet.deleteSheet(existingTargetSheet);
   }
 
   // Rename the newly copied sheet to the correct name.
-  targetSheet.setName(sourceSheetName);
+  targetSheet.setName(finalSheetName);
 
 
   const headerRow = 1;
@@ -114,5 +142,5 @@ function createParticipantViewFromActiveSheet() {
   protection.setDescription('This sheet is automatically generated. Please edit the source sheet, and rerun the script to update.');
   protection.setWarningOnly(true);
 
-  SpreadsheetApp.getUi().alert(`Sheet "${sourceSheetName}" in spreadsheet "${targetSpreadsheet.getName()}" created/updated successfully with ${columnsToCopyIndices.length} columns!`);
+  SpreadsheetApp.getUi().alert(`Sheet "${finalSheetName}" in spreadsheet "${targetSpreadsheet.getName()}" created/updated successfully with ${columnsToCopyIndices.length} columns!`);
 }

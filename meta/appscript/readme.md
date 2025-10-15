@@ -10,12 +10,15 @@ Once installed, this script adds a new menu called `Bootcamp Tools` to the Googl
 
 ### 1. Create Participant View
 
-*   **What it does:** Creates a simplified, participant-friendly version of the timetable in a separate Google Sheet.
+*   **What it does:** Creates a simplified, participant-friendly version of the timetable, either in a new tab or in a separate Google Sheet.
 *   **How it works:**
-    1.  It looks for a cell in your master timetable containing the text `Participant View Sheet: <URL>`, where `<URL>` is the link to the target spreadsheet.
-    2.  It copies the current sheet to the target spreadsheet.
-    3.  In the new copy, it **deletes all columns whose headers (in row 1) are not bold**. This allows you to maintain a detailed master schedule with internal notes, TA assignments, etc., while only showing participants the essential information.
-    4.  The generated sheet is protected to prevent accidental edits.
+    1.  The script prompts you to select where to create the new view.
+    2.  It automatically looks for a cell in your sheet containing `Participant View Sheet: <URL>`.
+        *   **If a URL is found:** It offers a choice: update the target spreadsheet or create a new tab in the current one.
+        *   **If no URL is found:** It explains how to set a target URL and defaults to creating a new tab in the current spreadsheet.
+    3.  If the view is created in the same spreadsheet, the new sheet is named `[Original Sheet Name] - Participant View` to avoid overwriting the original.
+    4.  In the new sheet, it **deletes all columns whose headers (in row 1) are not bold**. This allows you to maintain a detailed master schedule with internal notes while only showing participants the essential information.
+    5.  The generated sheet is protected to prevent accidental edits.
 
 ### 2. Update Day Headers with Dates
 
