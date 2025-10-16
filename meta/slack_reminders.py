@@ -29,9 +29,9 @@ Run a quick auth test:
 Usage examples
 --------------
 Schedule from CSV (dry run first):
-  uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv --tz Europe/Paris --dry-run
+  uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv --dry-run
 Schedule for real:
-  uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv --tz Europe/Paris
+  uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv
 
 Export channel members with fuzzy search:
   uv run python -m meta.slack_reminders export-channel-members
@@ -53,13 +53,14 @@ from typing import Iterable, Optional
 import csv
 import os
 from datetime import datetime
-from zoneinfo import ZoneInfo
+import yaml
 
 from dotenv import load_dotenv
 import typer
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from InquirerPy import inquirer
+from pydantic import BaseModel, ValidationError
 
 load_dotenv()
 
@@ -74,7 +75,9 @@ app = typer.Typer(
     "Notes:\n"
     "- Using a user token posts as YOU. A bot token will post as the app.\n"
     "- Slack can schedule up to 120 days ahead; max ~30 scheduled messages per channel.\n\n"
-    "Minimal user scopes: chat:write, users:read, users:read.email, channels:read, groups:read, im:write",
+    "Minimal user scopes: chat:write, users:read, users:read.email, channels:read, groups:read, im:write".replace(
+        "\n", "\n\n"
+    ),
     no_args_is_help=True,
     add_completion=False,
 )
@@ -123,10 +126,9 @@ def parse_csv(csv_path: Path) -> list[MessageJob]:
         return jobs
 
 
-def to_epoch_seconds(dt_text: str, tz: ZoneInfo) -> int:
+def to_epoch_seconds(dt_text: str) -> int:
     dt = datetime.strptime(dt_text, "%Y-%m-%d %H:%M")
-    aware = dt.replace(tzinfo=tz)
-    return int(aware.timestamp())
+    return int(dt.timestamp())
 
 
 def normalize_destination_value(value: str) -> str:
@@ -225,17 +227,13 @@ def schedule_jobs(client: WebClient, jobs: Iterable[MessageJob]) -> list[str]:
 @app.command()
 def schedule_csv(
     csv_path: Path = typer.Argument(..., exists=True, readable=True),
-    tz: str = typer.Option(
-        os.getenv("TZ") or "UTC",
-        help="Timezone for interpreting CSV 'date' values (IANA name, e.g. Europe/Paris). Defaults to $TZ or UTC.",
-    ),
     dry_run: bool = typer.Option(False, help="Parse and resolve, but do not call Slack."),
 ):
     """Schedule Slack messages from a CSV.
 
     CSV columns (required, exact headers):
       - content: message text
-      - date:    'YYYY-MM-DD HH:MM' in the timezone passed with --tz
+      - date:    'YYYY-MM-DD HH:MM' (interpreted in your local timezone)
       - destination: one of @username, email@example.com, U..., D..., C..., #channel_name
 
     CSV example:
@@ -245,12 +243,11 @@ def schedule_csv(
       1:1 ping,2025-10-06 14:15,bob@example.com
 
     Examples:
-      uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv --tz Europe/Paris --dry-run
-      uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv --tz Europe/Paris
+      uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv --dry-run
+      uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv
 
     Environment:
       - SLACK_USER_TOKEN: User OAuth token (xoxp-...) for posting as you
-      - Optional TZ: default timezone if --tz not provided
 
     Required user scopes (minimal):
       - chat:write (schedule/post messages)
@@ -260,7 +257,6 @@ def schedule_csv(
     """
     token = load_user_token()
     client = WebClient(token=token)
-    zone = ZoneInfo(tz)
 
     jobs = parse_csv(csv_path)
 
@@ -268,23 +264,23 @@ def schedule_csv(
     for job in jobs:
         try:
             job.channel_id = find_or_open_channel_id(client, job.destination)
-            job.post_at_epoch = to_epoch_seconds(job.date_text, zone)
+            job.post_at_epoch = to_epoch_seconds(job.date_text)
         except SlackApiError as e:
             raise RuntimeError(
                 f"Slack API error while resolving '{job.destination}': {e.response.get('error')}"
             )
 
     # Validate all in future (Slack requires future times)
-    now = int(datetime.now(tz=zone).timestamp())
+    now = int(datetime.now().timestamp())
     in_past = [j for j in jobs if j.post_at_epoch is not None and j.post_at_epoch <= now]
     if in_past:
         examples = ", ".join([f"{j.destination} at {j.date_text}" for j in in_past[:3]])
-        raise RuntimeError(f"Some messages are not in the future in timezone {tz}: {examples}")
+        raise RuntimeError(f"Some messages are not in the future: {examples}")
 
     # Dry-run output
     for job in jobs:
         typer.echo(
-            f"Ready: channel={job.channel_id} at {job.post_at_epoch} ({job.date_text} {tz}) text='{job.content[:50]}'"
+            f"Ready: channel={job.channel_id} at {job.post_at_epoch} ({job.date_text}) text='{job.content[:50]}'"
         )
 
     if dry_run:
@@ -532,9 +528,8 @@ def delete_scheduled():
     def fmt(m: dict) -> str:
         txt = (m.get("text") or "").replace("\n", " ")
         ts = m.get("post_at")
-        tz = ZoneInfo(os.getenv("TZ") or "UTC")
         when = (
-            datetime.fromtimestamp(ts, tz=tz).strftime("%Y-%m-%d %H:%M")
+            datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
             if isinstance(ts, int)
             else str(ts)
         )
@@ -578,6 +573,137 @@ def delete_scheduled():
 
     if errors:
         typer.echo("Some deletions failed:\n" + "\n".join(errors))
+
+
+def relative_time(post_at_epoch: int) -> str:
+    """Format time relative to now."""
+    now_epoch = int(datetime.now().timestamp())
+    diff_seconds = post_at_epoch - now_epoch
+
+    if diff_seconds < 0:
+        return "in the past"
+    if diff_seconds < 3600:
+        minutes = diff_seconds // 60
+        if minutes < 1:
+            return "< 1 minute"
+        return f"in {minutes} minute{'s' if minutes != 1 else ''}"
+    if diff_seconds < 86400:
+        hours = diff_seconds // 3600
+        return f"in {hours} hour{'s' if hours != 1 else ''}"
+
+    days = diff_seconds // 86400
+    remaining_hours = (diff_seconds % 86400) // 3600
+    if remaining_hours == 0:
+        return f"in {days} day{'s' if days != 1 else ''}"
+    return f"in {days} day{'s' if days != 1 else ''} {remaining_hours} hour{'s' if remaining_hours != 1 else ''}"
+
+
+class OneOnOneRemindersModel(BaseModel):
+    """Pydantic model for 1:1 reminders YAML validation."""
+
+    date: str
+    template: str
+    pairs: dict[str, str]
+    user_id: dict[str, str]
+
+    class Config:
+        extra = "allow"  # Allow extra fields but validate required ones
+
+
+def parse_1_1_yaml(yaml_path: Path) -> dict:
+    """Parse a 1:1 reminders YAML file."""
+    with yaml_path.open() as f:
+        data = yaml.safe_load(f)
+    try:
+        validated = OneOnOneRemindersModel(**data)
+        return validated.model_dump()
+    except ValidationError as e:
+        raise RuntimeError(f"Invalid YAML structure: {e}")
+
+
+def schedule_1_1_reminders(
+    yaml_path: Path = typer.Argument(..., exists=True, readable=True),
+):
+    """Schedule 1:1 reminder messages from a YAML file.
+
+    YAML format:
+      date: 'YYYY-MM-DD HH:MM'
+      template: 'Message with {name1} and {name2} variables'
+      pairs:
+        name1: name2
+        ...
+      user_id:
+        name1: Uxxxxxxxx
+        name2: Uxxxxxxxx
+        ...
+
+    For each pair, a message is sent to name1 (the key) with name1 and name2 templated.
+
+    Example:
+      uv run python -m meta.slack_reminders schedule-1-1-reminders path/reminders.yaml
+    """
+    token = load_user_token()
+    client = WebClient(token=token)
+
+    data = parse_1_1_yaml(yaml_path)
+    date_str = data.get("date")
+    template = data.get("template", "")
+    pairs: dict[str, str] = data.get("pairs", {})
+    user_ids: dict[str, str] = data.get("user_id", {})
+
+    if not date_str or not template or not pairs:
+        raise RuntimeError("YAML must have 'date', 'template', and 'pairs' keys.")
+
+    post_at_epoch = to_epoch_seconds(date_str)
+    now = int(datetime.now().timestamp())
+    if post_at_epoch <= now:
+        raise RuntimeError(f"Date '{date_str}' is not in the future (using local timezone).")
+
+    # Build jobs
+    jobs: list[tuple[str, str, str, str]] = []  # (name1, user_id, content, relative_time)
+    for name1, name2 in pairs.items():
+        user_id = user_ids.get(name1)
+        if not user_id:
+            raise RuntimeError(f"User '{name1}' not found in user_id map.")
+        content = template.format(name1=name1, name2=name2)
+        rel_time = relative_time(post_at_epoch)
+        jobs.append((name1, user_id, content, rel_time))
+
+    # Display all messages with confirmation
+    typer.echo(
+        f"\nScheduling {len(jobs)} messages for {date_str} ({relative_time(post_at_epoch)}):\n"
+    )
+    for name1, user_id, content, rel_time in jobs:
+        typer.echo(f"→ @{name1} ({user_id}): {content[:70]}")
+    typer.echo("")
+
+    confirm = inquirer.confirm(
+        message=f"Schedule {len(jobs)} messages?",
+        default=False,
+    ).execute()
+    if not confirm:
+        typer.echo("Cancelled.")
+        return
+
+    # Schedule all
+    scheduled_ids: list[str] = []
+    for name1, user_id, content, _ in jobs:
+        try:
+            resp = client.chat_scheduleMessage(
+                channel=user_id,
+                text=content,
+                post_at=post_at_epoch,
+            )
+            scheduled_ids.append(resp["scheduled_message_id"])
+        except SlackApiError as e:
+            raise RuntimeError(f"Slack API error for '{name1}': {e.response.get('error')}")
+
+    typer.echo(f"\n✓ Scheduled {len(scheduled_ids)} messages.")
+
+
+app.command(help=schedule_1_1_reminders.__doc__.replace("\n", "\n\n"), no_args_is_help=True)(
+    schedule_1_1_reminders
+)
 
 
 def main():
