@@ -10,8 +10,8 @@ from utils.feedback_utils import FeedbackParser
 from utils.streamlit_utils import State, render_select_camp_message
 
 # Expected column header patterns
-RATING_PATTERN = r"How would you rate the '([^']+)'"
-FEEDBACK_PATTERN = r"Any additional feedback on '([^']+)'"
+RATING_PATTERN = r"How would you rate the '(.*)'[^']*$"
+FEEDBACK_PATTERN = r"Any additional feedback on '(.*)'[^']*$"
 
 # Page config
 st.set_page_config(page_title="Session Feedback Analysis", page_icon="📊", layout="wide")
@@ -196,6 +196,15 @@ def render_session_analysis_tab(feedback_data, show_names):
         # Detailed feedback
         st.markdown("### 💬 Detailed Feedback")
 
+        # Checkbox for session docs format
+        format_for_docs = st.checkbox(
+            "Format for session docs",
+            value=False,
+            help="Display feedback in a compact format suitable for copying into session documentation",
+        )
+        if format_for_docs:
+            show_names = False
+
         if session.entries:
             # Filter and sort entries: text feedback first, then rating-only
             entries_with_text = [
@@ -203,6 +212,7 @@ def render_session_analysis_tab(feedback_data, show_names):
                 for entry in session.entries
                 if entry.feedback_text is not None and entry.feedback_text.strip()
             ]
+            entries_with_text.sort(key=lambda x: x.rating or 99, reverse=True)
             entries_rating_only = [
                 entry
                 for entry in session.entries
@@ -213,16 +223,24 @@ def render_session_analysis_tab(feedback_data, show_names):
             # Show entries with text feedback first
             if entries_with_text:
                 st.markdown("**💬 Feedback with Comments:**")
+                display_lines = []
                 for entry in entries_with_text:
-                    # Compact single-line display
                     rating_text = "⭐" * entry.rating if entry.rating else "📝"
-                    name_text = (
-                        f"**{entry.participant_name}**"
-                        if (show_names and entry.participant_name)
-                        else "*anonymous*"
-                    )
-
-                    st.write(f"{rating_text} • {name_text}\n\n {entry.feedback_text}")
+                    if format_for_docs:
+                        display_lines.append(f"- {rating_text} • {entry.feedback_text}")
+                    else:
+                        name_text = (
+                            f"**{entry.participant_name}**"
+                            if (show_names and entry.participant_name)
+                            else "*anonymous*"
+                        )
+                        display_lines.append(
+                            f"{rating_text} • {name_text}\n\n {entry.feedback_text}"
+                        )
+                if format_for_docs:
+                    st.markdown("\n".join(display_lines))
+                else:
+                    st.write("\n\n".join(display_lines))
 
             # Show rating-only entries at the end, more compactly
             if entries_rating_only:
