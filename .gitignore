@@ -19,3 +19,7 @@ meta/config.yaml
 # Feedback forms authentication files
 meta/feedback_forms/creds.json
 meta/feedback_forms/token.pickle
+
+# macOS system files
+.DS_Store
+*/.DS_Store
