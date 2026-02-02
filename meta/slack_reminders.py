@@ -1,48 +1,126 @@
-"""Slack reminders CLI
+"""Slack Reminders Tool - Send scheduled messages and manage Slack channels
 
-Overview
-========
-This module provides two commands:
-- schedule-csv: schedule Slack messages from a CSV so they send as YOU (user token)
-- export-channel-members: fuzzy-select a channel and export members (id/name/email)
+===================
+What does this do?
+===================
+This tool helps you:
+1. Schedule Slack messages to be sent automatically at a future date/time
+2. Export lists of people from Slack channels (with their emails)
+3. Delete scheduled messages you no longer want to send
 
-Obtaining a user token (xoxp-)
-------------------------------
-1) Create an app at `https://api.slack.com/apps` → Create New App → From scratch.
-2) In the app, go to OAuth & Permissions → User Token Scopes and add:
-   - chat:write
-   - users:read
-   - users:read.email
-   - channels:read
-   - groups:read
-   - im:write
-3) Click Install to Workspace (or Reinstall if you changed scopes). Approve the consent.
-4) After install, copy the User OAuth Token (starts with xoxp-). Ignore any xoxb- token.
-5) Add it to .env so the CLI can read it:
-   export SLACK_USER_TOKEN='xoxp-...'
+All messages will appear as if YOU sent them personally (not from a bot).
 
-Verification
-------------
-Run a quick auth test:
-  uv run python - <<'PY'\nimport os\nfrom slack_sdk import WebClient\nprint(WebClient(token=os.environ['SLACK_USER_TOKEN']).auth_test())\nPY
+=========================
+SETUP (One-time only)
+=========================
 
-Usage examples
---------------
-Schedule from CSV (dry run first):
-  uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv --dry-run
-Schedule for real:
-  uv run python -m meta.slack_reminders schedule-csv /abs/path/messages.csv
+Step 1: Get Your Slack Token
+-----------------------------
+You need a special "token" (like a password) so this tool can send messages on your behalf.
 
-Export channel members with fuzzy search:
-  uv run python -m meta.slack_reminders export-channel-members
-Write members to CSV:
-  uv run python -m meta.slack_reminders export-channel-members --output-csv /abs/path/members.csv
+A) Go to https://api.slack.com/apps
+B) Click the green "Create New App" button → Choose "From scratch"
+C) Give it a name (e.g., "My Message Scheduler") and select your workspace
+D) Click "Create App"
 
-Notes
------
-- User tokens (xoxp-) post as you. Bot tokens (xoxb-) post as the app.
-- Slack can schedule messages only for future times and up to ~120 days ahead.
-- You must be a member to see private channels and their members.
+E) Now give your app permission to send messages:
+   - In the left sidebar, click "OAuth & Permissions"
+   - Scroll down to "User Token Scopes"
+   - Click "Add an OAuth Scope" and add these 6 permissions:
+     * chat:write (to send messages)
+     * users:read (to find people)
+     * users:read.email (to see email addresses)
+     * channels:read (to see channel names)
+     * groups:read (to see private channels)
+     * im:write (to send direct messages)
+
+F) Scroll back to the top and click "Install to Workspace"
+G) Click "Allow" when Slack asks for permission
+H) You'll see a "User OAuth Token" - it starts with "xoxp-"
+   Copy this entire token (it's very long!)
+
+Step 2: Save Your Token
+------------------------
+Create a file called ".env" in the ML4G2.0 folder and add this line:
+   SLACK_USER_TOKEN='xoxp-paste-your-very-long-token-here'
+
+(Replace the xoxp-... part with your actual token from Step 1H)
+
+Step 3: Test It Works
+---------------------
+Open your terminal in the ML4G2.0 folder and run:
+   uv run python -m meta.slack_reminders --help
+
+If you see a help message, you're all set!
+
+===================
+HOW TO USE IT
+===================
+
+OPTION 1: Schedule Messages from a Spreadsheet (CSV)
+----------------------------------------------------
+Good for: Sending many personalized messages at once
+
+1) Create a spreadsheet with these exact column headers:
+   - content (what the message says)
+   - date (when to send it, format: YYYY-MM-DD HH:MM like "2025-10-05 14:30")
+   - destination (who gets it: @username, email@example.com, or #channel-name)
+
+2) Save it as a CSV file (example: my_messages.csv)
+
+3) TEST IT FIRST (doesn't actually send):
+   uv run python -m meta.slack_reminders schedule-csv /full/path/to/my_messages.csv --dry-run
+
+4) If it looks good, send for real:
+   uv run python -m meta.slack_reminders schedule-csv /full/path/to/my_messages.csv
+
+OPTION 2: Schedule Messages from a Template (YAML)
+--------------------------------------------------
+Good for: Sending similar messages to many people with personalized parts
+
+See the readme.md for YAML format details.
+
+Run with:
+   uv run python -m meta.slack_reminders schedule-yaml /full/path/to/reminders.yaml
+
+OPTION 3: Export a List of People from a Channel
+------------------------------------------------
+1) Run this command:
+   uv run python -m meta.slack_reminders export-channel-members
+
+2) Type to search for your channel, press Enter to select it
+
+3) You'll see a list of everyone in that channel with their emails
+
+To save to a file instead:
+   uv run python -m meta.slack_reminders export-channel-members --output-csv /full/path/to/members.csv
+
+OPTION 4: Delete Scheduled Messages
+-----------------------------------
+Changed your mind about a scheduled message?
+
+1) Run:
+   uv run python -m meta.slack_reminders delete-scheduled
+
+2) Search and select the messages you want to cancel, press Tab to select, Enter to confirm
+
+3) Confirm deletion when prompted
+
+===================
+TROUBLESHOOTING
+===================
+- "SLACK_USER_TOKEN not found" → Make sure your .env file exists and has the token
+- "Permission denied" → Your token might be missing some scopes (see Setup Step 1E)
+- "Message in the past" → Check your date format and make sure it's a future date
+- Messages not showing up → Make sure you're a member of the channel you're messaging
+
+===================
+IMPORTANT NOTES
+===================
+- All messages send as YOU (your Slack profile), not as a bot
+- You can schedule up to 120 days in the future
+- Times are in YOUR computer's timezone
+- You must be a member of private channels to message them
 """
 
 from __future__ import annotations
@@ -342,6 +420,18 @@ def users_by_id(client: WebClient, user_ids: list[str]) -> dict[str, dict]:
     return users
 
 
+def list_users(client: WebClient) -> list[dict]:
+    users: list[dict] = []
+    cursor: str | None = None
+    while True:
+        resp = client.users_list(limit=200, cursor=cursor)
+        users.extend(resp.get("members", []))
+        cursor = resp.get("response_metadata", {}).get("next_cursor") or None
+        if not cursor:
+            break
+    return users
+
+
 @app.command()
 def export_channel_members(
     output_csv: Optional[Path] = typer.Option(
@@ -461,6 +551,12 @@ def _resolve_channel_labels(client: WebClient, channel_ids: list[str]) -> dict[s
     except SlackApiError:
         self_user = None
 
+    try:
+        all_users = list_users(client)
+        all_users_by_id = {u["id"]: u for u in all_users}
+    except SlackApiError:
+        all_users_by_id = {}
+
     for ch_id in channel_ids:
         if not ch_id:
             continue
@@ -479,7 +575,7 @@ def _resolve_channel_labels(client: WebClient, channel_ids: list[str]) -> dict[s
                     except SlackApiError:
                         other = None
                 if other:
-                    u = users_by_id(client, [other]).get(other, {})
+                    u = all_users_by_id.get(other, {})
                     p = u.get("profile", {})
                     name = p.get("display_name") or p.get("real_name") or u.get("name") or other
                     labels[ch_id] = f"@{name}"
@@ -492,10 +588,9 @@ def _resolve_channel_labels(client: WebClient, channel_ids: list[str]) -> dict[s
                         "members", []
                     )
                     others = [m for m in members if m != self_user][:2]
-                    users_map = users_by_id(client, others) if others else {}
                     names: list[str] = []
                     for uid in others:
-                        u = users_map.get(uid, {})
+                        u = all_users_by_id.get(uid, {})
                         p = u.get("profile", {})
                         n = p.get("display_name") or p.get("real_name") or u.get("name") or uid
                         names.append(f"@{n}")
@@ -598,61 +693,65 @@ def relative_time(post_at_epoch: int) -> str:
     return f"in {days} day{'s' if days != 1 else ''} {remaining_hours} hour{'s' if remaining_hours != 1 else ''}"
 
 
-class OneOnOneRemindersModel(BaseModel):
-    """Pydantic model for 1:1 reminders YAML validation."""
+class ScheduleYamlModel(BaseModel):
+    """Pydantic model for schedule-yaml validation."""
 
     date: str
     template: str
-    pairs: dict[str, str]
+    variables: dict[str, dict[str, str]]
     user_id: dict[str, str]
 
     class Config:
         extra = "allow"  # Allow extra fields but validate required ones
 
 
-def parse_1_1_yaml(yaml_path: Path) -> dict:
-    """Parse a 1:1 reminders YAML file."""
+def parse_schedule_yaml(yaml_path: Path) -> dict:
+    """Parse a schedule YAML file."""
     with yaml_path.open() as f:
         data = yaml.safe_load(f)
     try:
-        validated = OneOnOneRemindersModel(**data)
+        validated = ScheduleYamlModel(**data)
         return validated.model_dump()
     except ValidationError as e:
         raise RuntimeError(f"Invalid YAML structure: {e}")
 
 
-def schedule_1_1_reminders(
+def schedule_yaml(
     yaml_path: Path = typer.Argument(..., exists=True, readable=True),
 ):
-    """Schedule 1:1 reminder messages from a YAML file.
+    """Schedule messages from a YAML file.
 
     YAML format:
       date: 'YYYY-MM-DD HH:MM'
-      template: 'Message with {name1} and {name2} variables'
-      pairs:
-        name1: name2
-        ...
+      template: 'Message with {var1} and {var2} variables'
+      variables:
+        var1:
+          personA: value_for_A
+          personB: value_for_B
+        var2:
+          personA: another_value
       user_id:
-        name1: Uxxxxxxxx
-        name2: Uxxxxxxxx
+        personA: Uxxxxxxxx
+        personB: Uxxxxxxxx
         ...
 
-    For each pair, a message is sent to name1 (the key) with name1 and name2 templated.
+    For each person defined in `variables`, a message is sent to them,
+    with the template filled out from their values.
 
     Example:
-      uv run python -m meta.slack_reminders schedule-1-1-reminders path/reminders.yaml
+      uv run python -m meta.slack_reminders schedule-yaml path/reminders.yaml
     """
     token = load_user_token()
     client = WebClient(token=token)
 
-    data = parse_1_1_yaml(yaml_path)
+    data = parse_schedule_yaml(yaml_path)
     date_str = data.get("date")
     template = data.get("template", "")
-    pairs: dict[str, str] = data.get("pairs", {})
+    variables: dict[str, dict[str, str]] = data.get("variables", {})
     user_ids: dict[str, str] = data.get("user_id", {})
 
-    if not date_str or not template or not pairs:
-        raise RuntimeError("YAML must have 'date', 'template', and 'pairs' keys.")
+    if not date_str or not template or not variables:
+        raise RuntimeError("YAML must have 'date', 'template', and 'variables' keys.")
 
     post_at_epoch = to_epoch_seconds(date_str)
     now = int(datetime.now().timestamp())
@@ -660,21 +759,30 @@ def schedule_1_1_reminders(
         raise RuntimeError(f"Date '{date_str}' is not in the future (using local timezone).")
 
     # Build jobs
-    jobs: list[tuple[str, str, str, str]] = []  # (name1, user_id, content, relative_time)
-    for name1, name2 in pairs.items():
-        user_id = user_ids.get(name1)
+    people = set()
+    for _var_name, name_to_value in variables.items():
+        people.update(name_to_value.keys())
+
+    jobs: list[tuple[str, str, str, str]] = []  # (name, user_id, content, relative_time)
+    for name in sorted(list(people)):
+        substitutions = {}
+        for var_name, name_to_value in variables.items():
+            if name in name_to_value:
+                substitutions[var_name] = name_to_value[name]
+
+        user_id = user_ids.get(name)
         if not user_id:
-            raise RuntimeError(f"User '{name1}' not found in user_id map.")
-        content = template.format(name1=name1, name2=name2)
+            raise RuntimeError(f"User '{name}' not found in user_id map.")
+        content = template.format(**substitutions)
         rel_time = relative_time(post_at_epoch)
-        jobs.append((name1, user_id, content, rel_time))
+        jobs.append((name, user_id, content, rel_time))
 
     # Display all messages with confirmation
     typer.echo(
         f"\nScheduling {len(jobs)} messages for {date_str} ({relative_time(post_at_epoch)}):\n"
     )
-    for name1, user_id, content, rel_time in jobs:
-        typer.echo(f"→ @{name1} ({user_id}): {content[:70]}")
+    for name, user_id, content, rel_time in jobs:
+        typer.echo(f"→ @{name} ({user_id}): {content[:400]}")
     typer.echo("")
 
     confirm = inquirer.confirm(
@@ -687,7 +795,7 @@ def schedule_1_1_reminders(
 
     # Schedule all
     scheduled_ids: list[str] = []
-    for name1, user_id, content, _ in jobs:
+    for name, user_id, content, _ in jobs:
         try:
             resp = client.chat_scheduleMessage(
                 channel=user_id,
@@ -696,14 +804,14 @@ def schedule_1_1_reminders(
             )
             scheduled_ids.append(resp["scheduled_message_id"])
         except SlackApiError as e:
-            raise RuntimeError(f"Slack API error for '{name1}': {e.response.get('error')}")
+            raise RuntimeError(f"Slack API error for '{name}': {e.response.get('error')}")
 
     typer.echo(f"\n✓ Scheduled {len(scheduled_ids)} messages.")
 
 
-app.command(help=schedule_1_1_reminders.__doc__.replace("\n", "\n\n"), no_args_is_help=True)(
-    schedule_1_1_reminders
-)
+app.command(
+    name="schedule-yaml", help=schedule_yaml.__doc__.replace("\n", "\n\n"), no_args_is_help=True
+)(schedule_yaml)
 
 
 def main():
