@@ -28,6 +28,16 @@ class ScaleQuestionConfig(BaseQuestionConfig):
     high_label: str | None = None
 
 
+class Scale5PointQuestionConfig(BaseQuestionConfig):
+    kind: Literal["scale_5_point"] = "scale_5_point"
+    scale_left: str | None = None
+    scale_right: str | None = None
+
+
+class Scale1To10QuestionConfig(BaseQuestionConfig):
+    kind: Literal["scale_1_10"] = "scale_1_10"
+
+
 class ChoiceQuestionConfig(BaseQuestionConfig):
     kind: Literal["choice"] = "choice"
     choices: list[str] | None = None
@@ -38,6 +48,8 @@ AnyQuestionConfig = Union[
     TextQuestionConfig,
     ParagraphQuestionConfig,
     ScaleQuestionConfig,
+    Scale5PointQuestionConfig,
+    Scale1To10QuestionConfig,
     ChoiceQuestionConfig,
 ]
 
@@ -57,6 +69,7 @@ class DayConfig(BaseModel):
 class CampConfig(BaseModel):
     camp_name: str
     drive_folder_id: str = ""
+    inherit_folder_permissions: bool = False
     teachers: list[str] = Field(default_factory=list)
     form_description: str = ""
     pre_questions: list[AnyQuestionConfig] = Field(default_factory=list)
