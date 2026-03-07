@@ -1,14 +1,16 @@
-FROM python:3.12.0 AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-alpine AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
 WORKDIR /app
 
-RUN python -m venv .venv
-COPY pyproject.toml ./
-RUN .venv/bin/pip install .
-FROM python:3.12.0-slim
-WORKDIR /app
-COPY --from=builder /app/.venv .venv/
+RUN pip install uv
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-default-groups --no-install-project
+
 COPY . .
+RUN uv sync --frozen --no-default-groups
+
 CMD ["/app/.venv/bin/streamlit", "run", "meta/web.py"]
