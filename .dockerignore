@@ -1,0 +1,24 @@
+fly.toml
+.git/
+__pycache__/
+.envrc
+.venv/
+data/
+.*cache/
+workshops
+tests
+.env*
+service_account_token.json
+meta/camps
+meta/config.yaml
+# Feedback forms authentication files
+meta/feedback_forms/creds.json
+meta/feedback_forms/token.pickle
+
+build/
+logs/
+crash-*
+scratch/
+.ipynb_checkpoints/
+*.pth
+*.zip
