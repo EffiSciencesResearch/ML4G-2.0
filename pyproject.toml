@@ -1,12 +1,40 @@
 [project]
-name = "ML4G2.0"
-version = "0.0.1"
+name = "ml4g"
+version = "0.1.0"
 requires-python = "~=3.12.0"  # Version on colab
 dependencies = [
+    "black[jupyter]",
+    "inquirerpy",
+    "joblib>=1.4.2",
+    "litellm>=1.67.0",
+    "openai",
+    "pandas",
+    "plotly",
+    "pre-commit",
+    "pydantic>=2.10.0",
+    "pytest",
+    "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.2",
+    "requests>=2.32.0",
+    "rich",
+    "slack-sdk>=3.36.0",
+    "tqdm",
+    "typer",
+    "boto3>=1.36.23",
+    "google-api-python-client",
+    "google-auth",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
+    "streamlit-local-storage>=0.0.25",
+    "streamlit-product-card>=1.0.0",
+    "streamlit>=1.42.2",
+]
+
+[dependency-groups]
+workshops = [
     "torch",
     "torchvision",
     "anthropic",
-    "black[jupyter]",
     "einops",
     "gymnasium",
     "inspect-ai==0.3.25",
@@ -20,9 +48,6 @@ dependencies = [
     "pandas",
     "plotly",
     "pre-commit",
-    "pygame",
-    "pytest",
-    "rich",
     "scikit-learn",
     "toml",
     "tqdm",
@@ -30,33 +55,15 @@ dependencies = [
     "transformer-utils",
     "transformers",
     "typeguard",
-    "typer",
     "circuitsvis",
     "opencv-python",
-    "inquirerpy",
-    "google-api-python-client",
-    "google-auth",
-    "google-auth-oauthlib",
-    "google-auth-httplib2",
-    "streamlit>=1.42.2",
     "python-dotenv>=1.0.1",
-    "streamlit-pills>=0.3.0",
-    "streamlit-local-storage>=0.0.25",
     "litellm>=1.67.0",
-    "pyyaml>=6.0.2",
     "requests>=2.32.0",
     "pydantic>=2.10.0",
     "joblib>=1.4.2",
-    "streamlit-product-card>=1.0.0",
-    "slack-sdk>=3.36.0",
     "kaleido>=1.1.0",
     "scipy>=1.15.2",
-    "boto3>=1.36.23",
-]
-
-[dependency-groups]
-dev = [
-    "pre-commit>=4.1.0",
 ]
 
 [tool.pytest.ini_options]
@@ -64,6 +71,9 @@ pythonpath = ["meta"]
 
 [tool.uv]
 package = false
+default-groups = "all"
+
+
 
 # Use only pytorch-cpu as we don't do GPU intensive things in this project
 # It saves a lot of disk space and download time. For GPU it's good practice to test on colab, as it's where most people will run it.
