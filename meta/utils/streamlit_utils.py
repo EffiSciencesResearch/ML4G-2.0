@@ -38,7 +38,7 @@ class PerBrowserSettings(BaseModel):
 class State:
 
     def __init__(self):
-        self.container = st.sidebar.container(height=0)
+        self.container = st.sidebar.container()
         with self.container:
             # Hides self.container completely, and extra elements created by SessionStorage
             st.markdown(
