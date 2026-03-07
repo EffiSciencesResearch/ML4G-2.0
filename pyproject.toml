@@ -49,6 +49,9 @@ dependencies = [
     "joblib>=1.4.2",
     "streamlit-product-card>=1.0.0",
     "slack-sdk>=3.36.0",
+    "kaleido>=1.1.0",
+    "scipy>=1.15.2",
+    "boto3>=1.36.23",
 ]
 
 [dependency-groups]
