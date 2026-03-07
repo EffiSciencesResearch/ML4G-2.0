@@ -1,13 +1,10 @@
 import csv
 import datetime
-from pathlib import Path
 import string
 from pydantic import BaseModel
 import random
 
 from utils.openai_utils import ServiceAccount
-
-CAMPS_DIR = Path(__file__).parent.parent / "camps"
 
 
 class Camp(BaseModel):

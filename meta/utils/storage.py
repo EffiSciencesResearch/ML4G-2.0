@@ -6,9 +6,11 @@ from pathlib import Path
 import boto3
 from dotenv import load_dotenv
 
-from utils.camp_utils import CAMPS_DIR, Camp
+from utils.camp_utils import Camp
 
 load_dotenv()
+
+CAMP_DIR = Path(__file__).parent.parent / "camps"
 
 
 class Storage(ABC):
@@ -26,7 +28,7 @@ class Storage(ABC):
 
 
 class LocalStorage(Storage):
-    def __init__(self, base_dir: Path = CAMPS_DIR):
+    def __init__(self, base_dir: Path = CAMP_DIR):
         self.base_dir = base_dir
         print(f"Using local storage: {self.base_dir}")
 
