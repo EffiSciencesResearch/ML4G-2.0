@@ -5,6 +5,25 @@ import streamlit as st
 from streamlit_local_storage import LocalStorage
 
 from utils.camp_utils import Camp
+from utils.storage import Storage, get_storage as _get_storage
+
+
+@st.cache_resource
+def get_storage() -> Storage:
+    return _get_storage()
+
+
+def get_current_camp() -> Camp | None:
+    return st.session_state.get("current_camp", None)
+
+
+def edit_current_camp(**kwargs):
+    camp = get_current_camp()
+    if not camp:
+        raise ValueError("No camp selected")
+    new_camp = camp.model_copy(update=kwargs)
+    get_storage().save_camp(new_camp)
+    st.session_state.current_camp = new_camp
 
 
 class PerBrowserSettings(BaseModel):
@@ -52,7 +71,7 @@ class State:
         self.per_browser_settings = new
 
     def login(self, camp_name: str, password: str, save_to_browser: bool = True) -> Camp | None:
-        camp = Camp.load_from_disk(camp_name)
+        camp = get_storage().load_camp(camp_name)
         if camp.password != password:
             return None
 
@@ -71,12 +90,8 @@ class State:
             if camp_name is None:
                 return None
 
-        camp = Camp.load_from_disk(camp_name)
-        return self.login(
-            camp_name,
-            self.per_browser_settings.camp_passwords.get(camp.name, ""),
-            save_to_browser=False,
-        )
+        saved_password = self.per_browser_settings.camp_passwords.get(camp_name, "")
+        return self.login(camp_name, saved_password, save_to_browser=False)
 
     def logout(self):
         st.session_state.pop("current_camp", None)
@@ -84,7 +99,7 @@ class State:
             self.save_settings(camp_passwords={})
 
     def select_camp(self, name: str):
-        camp = Camp.load_from_disk(name)
+        camp = get_storage().load_camp(name)
         st.session_state.current_camp = camp
         self.save_settings(current_camp=camp.name)
 
@@ -95,30 +110,28 @@ class State:
     # ----
 
     def login_form(self, key: str = "login_form") -> Camp | None:
-        camps = Camp.list_all()
-        camps.sort(key=lambda c: c.date, reverse=True)
+        camp_names = get_storage().list_camps()
 
-        if not camps:
+        if not camp_names:
             st.warning("No camps found. Please create a camp first.")
             return None
 
         default_camp = self.per_browser_settings.current_camp
-        default_camp_idx = next((i for i, c in enumerate(camps) if c.name == default_camp), 0)
-        camp: Camp = st.selectbox(
+        default_idx = next((i for i, n in enumerate(camp_names) if n == default_camp), 0)
+        selected_name: str = st.selectbox(
             "Select camp",
-            camps,
-            format_func=lambda c: c.name,
-            index=default_camp_idx,
+            camp_names,
+            index=default_idx,
             key=key + "_camp_select",
         )
-        assert camp is not None
+        assert selected_name is not None
 
-        if self.auto_login(camp.name):
-            st.write(f"You are logged in for `{camp.name}`.")
+        if self.auto_login(selected_name):
+            st.write(f"You are logged in for `{selected_name}`.")
             if st.button("Log out", on_click=self.logout, key=key + "_logout"):
                 st.toast("You were logged out.")
                 return None
-            return camp
+            return self.current_camp
 
         password = st.text_input(
             "Password",
@@ -129,7 +142,8 @@ class State:
         if not password:
             return None
 
-        if self.login(camp.name, password):
+        camp = self.login(selected_name, password)
+        if camp:
             st.success("You were logged in.")
             return camp
         else:

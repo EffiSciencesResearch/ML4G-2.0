@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 
-from utils.streamlit_utils import State
+from utils.streamlit_utils import State, get_storage
 from utils.camp_utils import Camp
 
 
@@ -21,7 +21,7 @@ with st.form("create_camp"):
 if letsgooo:
     if admin_password is not None and admin_password == os.getenv("ML4G_PORTAL_ADMIN_PASSWORD"):
         camp = Camp.new(name=name, date=date.strftime("%Y-%m-%d"))
-        camp.save_to_disk()
+        get_storage().save_camp(camp)
 
         st.warning(
             "### Please write down the password for this camp. It will not be shown again if you log out.\n\n"

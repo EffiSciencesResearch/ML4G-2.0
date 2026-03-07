@@ -1,7 +1,7 @@
 import csv
 import streamlit as st
 from utils.openai_utils import ServiceAccount
-from utils.camp_utils import get_current_camp, edit_current_camp
+from utils.streamlit_utils import get_current_camp, edit_current_camp
 import datetime
 from utils.streamlit_utils import State, render_select_camp_message
 from openai import OpenAI

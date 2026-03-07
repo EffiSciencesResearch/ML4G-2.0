@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 import plotly.graph_objects as go
 
-from utils.camp_utils import get_current_camp
+from utils.streamlit_utils import get_current_camp
 from utils.google_utils import SimpleGoogleAPI
 from utils.feedback_utils import FeedbackParser
 from utils.streamlit_utils import State, render_select_camp_message
