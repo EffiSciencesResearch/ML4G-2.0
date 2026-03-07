@@ -13,19 +13,14 @@ from InquirerPy import inquirer
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 
-DEFAULT_SERVICE_ACCOUNT_FILE = Path(__file__).parent / "service_account_token.json"
 CONFIG_FILE = Path(__file__).parent / "config.yaml"
 API: SimpleGoogleAPI = None
 
 
 @app.callback()
-def callback(
-    service_account_file: str = typer.Option(
-        DEFAULT_SERVICE_ACCOUNT_FILE, help="Path to the service account file"
-    )
-):
+def callback():
     global API
-    API = SimpleGoogleAPI(service_account_file)
+    API = SimpleGoogleAPI()
 
 
 def load_config():

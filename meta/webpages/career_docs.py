@@ -1,5 +1,4 @@
 import csv
-from pathlib import Path
 import streamlit as st
 from utils.streamlit_utils import get_current_camp
 from utils.google_utils import extract_id_from_url, SimpleGoogleAPI
@@ -11,9 +10,8 @@ with st.sidebar:
 
 camp = get_current_camp()
 
-SERVICE_ACCOUNT_FILE = Path(__file__).parent.parent / "service_account_token.json"
 BOT_EMAIL = "ml4g-automation@formal-vortex-401808.iam.gserviceaccount.com"
-API = SimpleGoogleAPI(SERVICE_ACCOUNT_FILE)
+API = SimpleGoogleAPI()
 
 st.write(
     """

@@ -18,8 +18,8 @@ from dataclasses import dataclass
 import requests
 import typer
 from pydantic import BaseModel, Field
-from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
+from utils.google_utils import load_service_account_credentials
 from googleapiclient.errors import HttpError
 import litellm
 from dotenv import load_dotenv
@@ -102,13 +102,11 @@ class FileState(BaseModel):
 class DriveChangelogMonitor:
     def __init__(
         self,
-        credentials_path: Path,
         slack_webhook_url: str,
         folder_id: str | None = None,
         model: str = "groq/llama-3.3-70b-versatile",
         state_file: Path = Path("meta/state.json"),
     ):
-        self.credentials_path = credentials_path
         self.slack_webhook_url = slack_webhook_url
         self.folder_id = folder_id
         self.model = model
@@ -120,12 +118,7 @@ class DriveChangelogMonitor:
 
     def authenticate(self) -> None:
         """Authenticate with Google Drive API using service account"""
-        if not self.credentials_path.exists():
-            raise FileNotFoundError(f"Google credentials not found at {self.credentials_path}")
-
-        self.credentials = Credentials.from_service_account_file(
-            str(self.credentials_path), scopes=SCOPES
-        )
+        self.credentials = load_service_account_credentials(SCOPES)
         self.service = build("drive", "v3", credentials=self.credentials)
         print("✓ Authenticated with Google Drive API")
 
@@ -821,10 +814,6 @@ Summary:"""
 
 @app.command()
 def main(
-    credentials_path: Path = typer.Option(
-        default=lambda: Path(os.getenv("GOOGLE_CREDENTIALS_PATH", "meta/credentials.json")),
-        help="Path to Google service account credentials JSON file",
-    ),
     slack_webhook_url: str = typer.Option(
         default=lambda: os.getenv("SLACK_WEBHOOK_URL", ""), help="Slack incoming webhook URL"
     ),
@@ -858,17 +847,12 @@ def main(
         )
         raise typer.Exit(1)
 
-    if not credentials_path.exists():
-        typer.echo(f"❌ Error: Google credentials file not found at {credentials_path}", err=True)
-        typer.echo(
-            "Set GOOGLE_CREDENTIALS_PATH environment variable or use --credentials-path option",
-            err=True,
-        )
+    if not os.environ.get("SERVICE_ACCOUNT_JSON"):
+        typer.echo("❌ Error: SERVICE_ACCOUNT_JSON environment variable is not set", err=True)
         raise typer.Exit(1)
 
     # Create and run monitor
     monitor_instance = DriveChangelogMonitor(
-        credentials_path=credentials_path,
         slack_webhook_url=slack_webhook_url,
         folder_id=folder_id,
         model=model,

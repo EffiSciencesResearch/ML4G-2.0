@@ -1,12 +1,12 @@
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import yaml
 import os
 import pickle
 
+from utils.google_utils import load_service_account_credentials
 from models import (
     AnyQuestionConfig,
     CampConfig,
@@ -28,13 +28,10 @@ SCOPES = [
 
 def get_credentials():
     """Get credentials with service account fallback to OAuth2."""
-    # Try service account first if available
-    service_account_path = os.path.join(os.path.dirname(SCRIPT_DIR), "service_account_token.json")
-    if os.path.exists(service_account_path):
+    # Try service account env var first if available
+    if os.environ.get("SERVICE_ACCOUNT_JSON"):
         print("Using service account authentication...")
-        return service_account.Credentials.from_service_account_file(
-            service_account_path, scopes=SCOPES
-        )
+        return load_service_account_credentials(SCOPES)
 
     # Fall back to existing OAuth2 flow
     print("Using OAuth2 authentication...")
@@ -55,10 +52,10 @@ def get_credentials():
                 creds = flow.run_local_server(port=0)
             except FileNotFoundError:
                 print("\n❌ Missing Google credentials!")
-                print(f"Service account file not found: {service_account_path}")
+                print("SERVICE_ACCOUNT_JSON environment variable not set")
                 print(f"OAuth2 credentials not found: {CREDS_PATH}")
                 print("\nTo use service account:")
-                print("1. Place service_account_token.json in meta/ directory")
+                print("1. Set the SERVICE_ACCOUNT_JSON environment variable")
                 print("\nTo use OAuth2:")
                 print("1. Go to https://console.cloud.google.com/apis/credentials")
                 print("2. Create OAuth 2.0 Client ID (Desktop app)")

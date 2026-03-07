@@ -1,6 +1,8 @@
 # %%
 from __future__ import annotations
 
+import json
+import os
 import re
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -63,18 +65,22 @@ class GDriveFileInfo(BaseModel):
             return base + "\n" + indent("\n".join(child.tree() for child in self.children), "| ")
 
 
-class SimpleGoogleAPI:
-    def __init__(self, service_account_file: str):
-        self.service_account_file = service_account_file
+def load_service_account_credentials(scopes: list[str]) -> service_account.Credentials:
+    """Load Google service account credentials from the SERVICE_ACCOUNT_JSON env var."""
+    service_account_info = json.loads(os.environ["SERVICE_ACCOUNT_JSON"])
+    return service_account.Credentials.from_service_account_info(
+        service_account_info, scopes=scopes
+    )
 
+
+class SimpleGoogleAPI:
+    def __init__(self):
         scopes = [
             "https://www.googleapis.com/auth/documents",
             "https://www.googleapis.com/auth/drive",
             "https://www.googleapis.com/auth/spreadsheets.readonly",
         ]
-        self.credentials = service_account.Credentials.from_service_account_file(
-            service_account_file, scopes=scopes
-        )
+        self.credentials = load_service_account_credentials(scopes)
 
         self.drive_service = build("drive", "v3", credentials=self.credentials)
         self.docs_service = build("docs", "v1", credentials=self.credentials)
@@ -267,7 +273,7 @@ class SimpleGoogleAPI:
 
 
 if __name__ == "__main__":
-    api = SimpleGoogleAPI("../service_account_token.json")
+    api = SimpleGoogleAPI()
 
     # doc_id = "1b_0XbG1X4oz7WW5iB_Ck_k-tQNaScvWhQvtdZsGSZHg"
     # print(api.get_file_name(doc_id))

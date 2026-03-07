@@ -1,7 +1,6 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from pathlib import Path
 import plotly.graph_objects as go
 
 from utils.streamlit_utils import get_current_camp
@@ -20,8 +19,7 @@ st.set_page_config(page_title="Session Feedback Analysis", page_icon="📊", lay
 @st.cache_resource
 def get_api():
     """Create and cache a SimpleGoogleAPI instance."""
-    SERVICE_ACCOUNT_FILE = Path(__file__).parent.parent / "service_account_token.json"
-    return SimpleGoogleAPI(SERVICE_ACCOUNT_FILE)
+    return SimpleGoogleAPI()
 
 
 @st.cache_data(ttl=300)  # Cache forever
