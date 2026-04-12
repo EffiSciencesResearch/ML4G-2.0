@@ -13,7 +13,7 @@ def test_sync(tmpdir):
     output_normal = tmpdir / "sample_notebook_normal.ipynb"
     output_hard = tmpdir / "sample_notebook_hard.ipynb"
 
-    sync(input_notebook)
+    sync([input_notebook])
 
     for output, expected in [(output_normal, expected_normal), (output_hard, expected_hard)]:
         for line1, line2 in zip(
