@@ -39,6 +39,7 @@ def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str])
         # Mandatory rating question (1-5 scale)
         rating_question = create_scale_question(
             ScaleQuestionConfig(
+                kind="scale",
                 text=f"How would you rate the '{session.name}' session?",
                 description=session.description,
                 low=1,
@@ -53,6 +54,7 @@ def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str])
         if session.reading_group:
             teacher_question = create_choice_question(
                 ChoiceQuestionConfig(
+                    kind="choice",
                     text=f"Which teacher facilitated the '{session.name}' reading group?",
                     choices=teachers,
                     mandatory=False,
@@ -63,6 +65,7 @@ def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str])
         # Optional feedback question - USE PARAGRAPH instead of text
         feedback_question = create_paragraph_question(
             ParagraphQuestionConfig(
+                kind="paragraph",
                 text=f"Any additional feedback on '{session.name}'?",
                 mandatory=False,
             )
@@ -91,11 +94,8 @@ def create_daily_feedback_form(
 
     # Move the newly created form to the specified folder
     if config.drive_folder_id:
-        try:
-            move_file_to_folder(drive_service, form_id, config.drive_folder_id)
-            print("  ✓ Form moved to Drive folder")
-        except Exception as e:
-            print(f"  ⚠ Failed to move form to Drive folder: {e}")
+        move_file_to_folder(drive_service, form_id, config.drive_folder_id)
+        print("  ✓ Form moved to Drive folder")
 
     # Prepare all questions
     all_questions = []
@@ -141,6 +141,7 @@ def create_daily_feedback_form(
         # Add caption question
         caption_question = create_text_question(
             TextQuestionConfig(
+                kind="text",
                 text="Provide a caption for this meme that describes your day!",
                 mandatory=False,
             )
@@ -203,11 +204,20 @@ def main():
         drive_service = get_drive_service()
         print("✓ Authentication successful!\n")
     except FileNotFoundError:
-        # Error message already printed by get_credentials()
         sys.exit(1)
     except Exception as e:
         print(f"❌ Authentication failed: {e}")
         sys.exit(1)
+
+    # Verify access to the target Drive folder before creating anything
+    if config.drive_folder_id:
+        try:
+            drive_service.files().get(
+                fileId=config.drive_folder_id, fields="id", supportsAllDrives=True
+            ).execute()
+        except Exception as e:
+            print(f"❌ Cannot access Drive folder '{config.drive_folder_id}': {e}")
+            sys.exit(1)
 
     # Create form for the selected day
     print(f"Creating feedback form for: {config.camp_name} - {day_name}")

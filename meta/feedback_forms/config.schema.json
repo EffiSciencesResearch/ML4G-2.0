@@ -1,6 +1,7 @@
 {
   "$defs": {
     "ChoiceQuestionConfig": {
+      "additionalProperties": false,
       "properties": {
         "text": {
           "title": "Text",
@@ -25,7 +26,6 @@
         },
         "kind": {
           "const": "choice",
-          "default": "choice",
           "title": "Kind",
           "type": "string"
         },
@@ -51,12 +51,14 @@
         }
       },
       "required": [
-        "text"
+        "text",
+        "kind"
       ],
       "title": "ChoiceQuestionConfig",
       "type": "object"
     },
     "DayConfig": {
+      "additionalProperties": false,
       "properties": {
         "meme": {
           "anyOf": [
@@ -105,6 +107,7 @@
       "type": "object"
     },
     "ParagraphQuestionConfig": {
+      "additionalProperties": false,
       "properties": {
         "text": {
           "title": "Text",
@@ -129,18 +132,19 @@
         },
         "kind": {
           "const": "paragraph",
-          "default": "paragraph",
           "title": "Kind",
           "type": "string"
         }
       },
       "required": [
-        "text"
+        "text",
+        "kind"
       ],
       "title": "ParagraphQuestionConfig",
       "type": "object"
     },
     "ScaleQuestionConfig": {
+      "additionalProperties": false,
       "properties": {
         "text": {
           "title": "Text",
@@ -165,7 +169,6 @@
         },
         "kind": {
           "const": "scale",
-          "default": "scale",
           "title": "Kind",
           "type": "string"
         },
@@ -205,12 +208,14 @@
         }
       },
       "required": [
-        "text"
+        "text",
+        "kind"
       ],
       "title": "ScaleQuestionConfig",
       "type": "object"
     },
     "SessionConfig": {
+      "additionalProperties": false,
       "properties": {
         "name": {
           "title": "Name",
@@ -241,6 +246,7 @@
       "type": "object"
     },
     "TextQuestionConfig": {
+      "additionalProperties": false,
       "properties": {
         "text": {
           "title": "Text",
@@ -265,18 +271,19 @@
         },
         "kind": {
           "const": "text",
-          "default": "text",
           "title": "Kind",
           "type": "string"
         }
       },
       "required": [
-        "text"
+        "text",
+        "kind"
       ],
       "title": "TextQuestionConfig",
       "type": "object"
     }
   },
+  "additionalProperties": false,
   "properties": {
     "camp_name": {
       "title": "Camp Name",

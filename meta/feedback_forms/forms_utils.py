@@ -22,7 +22,7 @@ CREDS_PATH = os.path.join(SCRIPT_DIR, "creds.json")
 TOKEN_PATH = os.path.join(SCRIPT_DIR, "token.pickle")
 SCOPES = [
     "https://www.googleapis.com/auth/forms.body",
-    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive",
 ]
 
 

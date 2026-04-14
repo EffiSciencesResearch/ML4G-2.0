@@ -1,27 +1,29 @@
 from typing import Literal, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Discriminated Union for Questions ---
 
 
 class BaseQuestionConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     text: str
     description: str | None = None
     mandatory: bool = False
 
 
 class TextQuestionConfig(BaseQuestionConfig):
-    kind: Literal["text"] = "text"
+    kind: Literal["text"]
 
 
 class ParagraphQuestionConfig(BaseQuestionConfig):
-    kind: Literal["paragraph"] = "paragraph"
+    kind: Literal["paragraph"]
 
 
 class ScaleQuestionConfig(BaseQuestionConfig):
-    kind: Literal["scale"] = "scale"
+    kind: Literal["scale"]
     low: int = 1
     high: int = 10
     low_label: str | None = None
@@ -29,7 +31,7 @@ class ScaleQuestionConfig(BaseQuestionConfig):
 
 
 class ChoiceQuestionConfig(BaseQuestionConfig):
-    kind: Literal["choice"] = "choice"
+    kind: Literal["choice"]
     choices: list[str] | None = None
     dropdown: bool = False
 
@@ -43,18 +45,24 @@ AnyQuestionConfig = Union[
 
 
 class SessionConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     description: str | None = None
     reading_group: bool = False
 
 
 class DayConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     meme: str | None = None
     sessions: list[SessionConfig]
     day_questions: list[AnyQuestionConfig] = Field(default_factory=list)
 
 
 class CampConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     camp_name: str
     drive_folder_id: str = ""
     teachers: list[str] = Field(default_factory=list)
