@@ -105,7 +105,7 @@ if st.button(
     use_container_width=True,
 ):
     for email, name in email_to_name.items():
-        st.write(f"Processing document for {name} ({email})", end="... ", flush=True)
+        st.write(f"Processing document for {name} ({email})... ")
         new_name = doc_name.replace("[NAME]", name)
         copied_doc_id = API.copy_file(
             extract_id_from_url(template_url), extract_id_from_url(folder_url), new_name
