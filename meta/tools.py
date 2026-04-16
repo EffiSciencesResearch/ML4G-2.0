@@ -744,6 +744,7 @@ def validate_make_pairing_graph_inputs(
     rounds: int,
     preferences: dict[tuple[str, str], int],
     ta_group: set[str],
+    unavailability: dict[str, set[int]] | None = None,
 ) -> list[str]:
     errors = []
     for pair in preferences.keys():
@@ -771,6 +772,10 @@ def validate_make_pairing_graph_inputs(
                 f"Preference {a, b} is not symmetric: {preferences[a, b]} != {preferences[b, a]}"
             )
 
+    for name in unavailability or {}:
+        if name not in names:
+            errors.append(f"Unavailability entry for unknown participant: {name}")
+
     return errors
 
 
@@ -781,6 +786,7 @@ def make_pairing_graph(
     preferences: dict[tuple[str, str], int],
     ta_group: set[str],
     ta_group_weight: int = 2,
+    unavailability: dict[str, set[int]] | None = None,
 ) -> dict[str, list[str]]:
     """
     Generate a pairing schedule for a given list of names over a specified number of rounds,
@@ -796,6 +802,9 @@ def make_pairing_graph(
             These names have special pairing rules.
         ta_group_weight (int, optional): The weight to be assigned to edges between names in the
             TA group and other names. Defaults to 2.
+        unavailability (dict[str, set[int]] | None): Maps a participant name to the set of
+            round indices (0-based) in which they are unavailable. Unavailable participants
+            receive "-" for that round and their remaining edges are preserved for future rounds.
 
     Returns:
         dict[str, list[str]]: A dictionary where keys are names and values are lists of names
@@ -819,7 +828,9 @@ def make_pairing_graph(
         And we rotate who is not paired with anyone.
     """
 
-    errors = validate_make_pairing_graph_inputs(names, rounds, preferences, ta_group)
+    errors = validate_make_pairing_graph_inputs(
+        names, rounds, preferences, ta_group, unavailability
+    )
     if errors:
         raise ValueError("\n".join(errors))
 
@@ -862,8 +873,14 @@ def make_pairing_graph(
                             ta_group_weight if meets_from_group[name] < max_meet_number else 1
                         )
 
+        # Exclude unavailable participants via a subgraph view (their edges survive in G)
+        unavailable_this_round = {
+            name for name, rounds_set in (unavailability or {}).items() if round in rounds_set
+        }
+        graph_for_round = G.subgraph([n for n in G.nodes() if n not in unavailable_this_round])
+
         # Get a maximum matching
-        matching: set[tuple[str, str]] = nx.max_weight_matching(G)
+        matching: set[tuple[str, str]] = nx.max_weight_matching(graph_for_round)
         # Remove the edges in the matching
         G.remove_edges_from(matching)
         # Add the matching to the pairings

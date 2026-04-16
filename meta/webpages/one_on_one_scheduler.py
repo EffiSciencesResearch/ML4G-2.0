@@ -60,7 +60,7 @@ rounds = st.slider(
     "Number of rounds of 1-1s", min_value=1, max_value=len(names) - 1, value=len(names) * 2 // 3
 )
 
-prefer_col, against_col = st.columns(2)
+prefer_col, against_col, unavail_col = st.columns(3)
 
 with prefer_col:
     preferences_text = st.text_area(
@@ -73,6 +73,13 @@ with against_col:
     against_text = st.text_area(
         'Pairs not to match (pairs "name1,name2")',
         help="Format: person1,person2 (one per line). Each pair will not be matched",
+        height=300,
+    )
+
+with unavail_col:
+    unavail_text = st.text_area(
+        "Unavailability (name,round)",
+        help="Format: name,round or name,start-end (one per line, rounds are 1-indexed). Example: Alice,3-6 means Alice is unavailable in rounds 3, 4, 5 and 6.",
         height=300,
     )
 
@@ -166,7 +173,53 @@ for p1, p2 in pairs_not_to_match:
 
 rounds_to_generate = rounds - preset_rounds
 
-errors = validate_make_pairing_graph_inputs(names, rounds_to_generate, preferences, set(tas))
+
+def parse_unavailability(text: str) -> dict[str, set[int]]:
+    """Parse unavailability entries into a dict mapping name → set of 0-based round indices.
+
+    Format per line: name,round  or  name,start-end  (rounds are 1-indexed in the UI).
+    Rounds outside [1, rounds] are silently ignored.
+    """
+    result: dict[str, set[int]] = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split(",", 1)
+        if len(parts) != 2:
+            st.error(
+                f"Invalid unavailability format: '{line}'. Expected 'name,round' or 'name,start-end'."
+            )
+            st.stop()
+        name, round_spec = parts[0].strip(), parts[1].strip()
+        if name not in names:
+            st.error(f"Unavailability entry for unknown participant: '{name}'.")
+            st.stop()
+        # Parse round_spec as either a single number or a range start-end
+        try:
+            if "-" in round_spec:
+                start_str, end_str = round_spec.split("-", 1)
+                start, end = int(start_str), int(end_str)
+            else:
+                start = end = int(round_spec)
+        except ValueError:
+            st.error(
+                f"Invalid round spec in unavailability: '{round_spec}'. Use a number or a range like '3-6'."
+            )
+            st.stop()
+        for user_round in range(start, end + 1):
+            # Convert 1-indexed user round to 0-indexed generated-round index
+            idx = user_round - 1 - preset_rounds
+            if 0 <= idx < rounds_to_generate:
+                result.setdefault(name, set()).add(idx)
+    return result
+
+
+unavailability = parse_unavailability(unavail_text)
+
+errors = validate_make_pairing_graph_inputs(
+    names, rounds_to_generate, preferences, set(tas), unavailability
+)
 if errors:
     st.error("\n- ".join(errors))
     st.stop()
@@ -189,7 +242,9 @@ if st.button("Try to generate schedule"):
     with st.spinner(f"Generating schedule (up to {tries} attempts)..."):
         for i in range(tries):
             try:
-                all_pairings = make_pairing_graph(names, rounds_to_generate, preferences, set(tas))
+                all_pairings = make_pairing_graph(
+                    names, rounds_to_generate, preferences, set(tas), unavailability=unavailability
+                )
                 st.success(f"Found a solution after {i + 1} attempts!")
                 break
             except KeyError:
