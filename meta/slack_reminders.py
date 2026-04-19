@@ -777,12 +777,24 @@ def schedule_yaml(
         rel_time = relative_time(post_at_epoch)
         jobs.append((name, user_id, content, rel_time))
 
+    # Resolve Slack display names for mapping verification
+    slack_names: dict[str, str] = {}
+    all_users = list_users(client)
+    all_users_by_id = {u["id"]: u for u in all_users}
+    for _, user_id, _, _ in jobs:
+        u = all_users_by_id.get(user_id, {})
+        p = u.get("profile", {})
+        slack_names[user_id] = (
+            p.get("real_name") or p.get("display_name") or u.get("name") or user_id
+        )
+
     # Display all messages with confirmation
     typer.echo(
         f"\nScheduling {len(jobs)} messages for {date_str} ({relative_time(post_at_epoch)}):\n"
     )
     for name, user_id, content, rel_time in jobs:
-        typer.echo(f"→ @{name} ({user_id}): {content[:400]}")
+        slack_name = slack_names.get(user_id, user_id)
+        typer.echo(f"[{name} → {slack_name}] → ({user_id}): {content[:400]}")
     typer.echo("")
 
     confirm = inquirer.confirm(
