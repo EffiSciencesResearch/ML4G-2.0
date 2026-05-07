@@ -4,7 +4,7 @@ import string
 from pydantic import BaseModel
 import random
 
-from utils.openai_utils import ServiceAccount
+from utils.openrouter_utils import OpenRouterAPIKey
 
 
 class Camp(BaseModel):
@@ -12,7 +12,7 @@ class Camp(BaseModel):
     password: str
     date: str
     participants_name_and_email_csv: str = "name,email\n"
-    openai_camp_service_account: ServiceAccount | None = None
+    openrouter_api_key: OpenRouterAPIKey | None = None
     feedback_sheet_url: str | None = None
     # If you add a new field here, remember to add it to edit_camp.py too.
 
