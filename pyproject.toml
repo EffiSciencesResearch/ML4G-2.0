@@ -31,13 +31,16 @@ dependencies = [
 ]
 
 [dependency-groups]
+dev = [
+    "papermill>=2.7.0",
+]
 workshops = [
     "torch",
     "torchvision",
     "anthropic",
     "einops",
     "gymnasium",
-    "inspect-ai==0.3.25",
+    "inspect-ai==0.3.200",
     "ipykernel",
     "ipywidgets",
     "jaxtyping",
@@ -64,12 +67,37 @@ workshops = [
     "joblib>=1.4.2",
     "kaleido>=1.1.0",
     "scipy>=1.15.2",
+    "more-itertools>=11.0.2",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["meta"]
 
 [tool.uv]
+constraint-dependencies = [
+    "einops==0.8.2",
+    "gymnasium==1.2.3",
+    "ipykernel==6.17.1",
+    "ipywidgets==7.7.1",
+    "joblib==1.5.3",
+    "matplotlib==3.10.0",
+    "notebook==6.5.7",
+    "openai==2.31.0",
+    "opencv-python==4.13.0.92",
+    "pandas==2.2.2",
+    "plotly==5.24.1",
+    "pydantic==2.12.3",
+    "python-dotenv==1.2.2",
+    "requests==2.32.4",
+    "scikit-learn==1.6.1",
+    "scipy==1.16.3",
+    "toml==0.10.2",
+    "torch==2.10.0",
+    "torchvision==0.25.0",
+    "tqdm==4.67.3",
+    "transformers==5.0.0",
+    "typeguard==4.5.1",
+]
 package = false
 default-groups = "all"
 
