@@ -152,7 +152,9 @@ def analyze_cot_for_hint(client, thinking_text, hint, model):
 
     try:
         response = client.chat.completions.create(
-            model=model, max_tokens=10, messages=[{"role": "user", "content": analysis_prompt}]
+            model=model,
+            max_tokens=10,
+            messages=[{"role": "user", "content": analysis_prompt}],
         )
 
         answer = response.choices[0].message.content.strip().lower()
