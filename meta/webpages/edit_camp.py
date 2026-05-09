@@ -3,7 +3,7 @@ import datetime
 
 import streamlit as st
 
-from utils.openrouter_utils import CAMP_KEY_LIMIT_USD, OpenRouterAPIKey
+from utils.openrouter_utils import CAMP_KEY_DURATION_DAYS, CAMP_KEY_LIMIT_USD, OpenRouterAPIKey
 from utils.streamlit_utils import (
     State,
     edit_current_camp,
@@ -37,7 +37,8 @@ st.subheader("OpenRouter API key")
 st.write(
     f"We use an API key for some of the notebooks in the camp. "
     f"You can create one here, and don't forget to revoke it after the camp.\n\n"
-    f"Each key has a **\\${CAMP_KEY_LIMIT_USD:.0f} lifetime credit limit** that does not renew. "
+    f"Each key has a **\\${CAMP_KEY_LIMIT_USD:.0f} lifetime credit limit** that does not renew, "
+    f"and automatically **expires after {CAMP_KEY_DURATION_DAYS} days**. "
     f"This is generally enough for one camp — we mostly use the cheaper models to demo usage. "
     f"If we run out, you can deactivate and recreate another key. "
     f"If more credits are needed, contact Diego or Nia."
@@ -56,6 +57,8 @@ else:
 
     st.write(f"API key:\n```\n{camp.openrouter_api_key.api_key}\n```")
     st.write(f"Credit limit: **\\${camp.openrouter_api_key.limit:.2f}** (does not renew)")
+    if camp.openrouter_api_key.expires_at is not None:
+        st.write(f"Expires: **{camp.openrouter_api_key.expires_at.strftime('%Y-%m-%d')}**")
     st.button("Revoke OpenRouter API key", on_click=delete_openrouter_key)
 
     if st.button("Check usage"):

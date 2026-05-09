@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import dotenv
@@ -9,6 +10,7 @@ dotenv.load_dotenv()
 provisioning_key = os.getenv("OPENROUTER_PROVISIONING_KEY")
 
 CAMP_KEY_LIMIT_USD = 20.0
+CAMP_KEY_DURATION_DAYS = 14
 
 
 class OpenRouterAPIKey(BaseModel):
@@ -16,6 +18,7 @@ class OpenRouterAPIKey(BaseModel):
     api_key: str
     name: str
     limit: float
+    expires_at: datetime.datetime | None = None
 
     @classmethod
     def from_name(cls, name: str, limit: float = CAMP_KEY_LIMIT_USD) -> "OpenRouterAPIKey":
@@ -25,13 +28,18 @@ class OpenRouterAPIKey(BaseModel):
             "https://openrouter.ai/settings/provisioning-keys"
         )
 
+        expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+            days=CAMP_KEY_DURATION_DAYS
+        )
+        expires_at_str = expires_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+
         response = requests.post(
             "https://openrouter.ai/api/v1/keys",
             headers={
                 "Authorization": f"Bearer {provisioning_key}",
                 "Content-Type": "application/json",
             },
-            json={"name": name, "limit": limit},
+            json={"name": name, "limit": limit, "expires_at": expires_at_str},
         )
         response.raise_for_status()
         data = response.json()
@@ -41,6 +49,7 @@ class OpenRouterAPIKey(BaseModel):
             api_key=data["key"],
             name=key_data["name"],
             limit=key_data.get("limit") or limit,
+            expires_at=expires_at,
         )
 
     def delete(self):
