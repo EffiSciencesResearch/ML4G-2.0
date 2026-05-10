@@ -787,6 +787,7 @@ def make_pairing_graph(
     ta_group: set[str],
     ta_group_weight: int = 2,
     unavailability: dict[str, set[int]] | None = None,
+    seed: int | None = None,
 ) -> dict[str, list[str]]:
     """
     Generate a pairing schedule for a given list of names over a specified number of rounds,
@@ -835,6 +836,9 @@ def make_pairing_graph(
         raise ValueError("\n".join(errors))
 
     import networkx as nx
+    import random as _random
+
+    rng = _random.Random(seed)
 
     meets_from_group = {name: 0 for name in names}
     # Always add a dummy "-" node so that any round whose available subgraph has
@@ -889,8 +893,14 @@ def make_pairing_graph(
             available.append("-")
         graph_for_round = G.subgraph(available)
 
+        # Jitter weights on a copy to break ties randomly without polluting G or
+        # overriding the real preference / TA-balancing weights (jitter << 1).
+        jittered = graph_for_round.copy()
+        for u, v in jittered.edges():
+            jittered[u][v]["weight"] = jittered[u][v].get("weight", 1) + rng.uniform(0, 1e-3)
+
         # Get a maximum matching
-        matching: set[tuple[str, str]] = nx.max_weight_matching(graph_for_round)
+        matching: set[tuple[str, str]] = nx.max_weight_matching(jittered)
         # Remove the edges in the matching
         G.remove_edges_from(matching)
         # Add the matching to the pairings

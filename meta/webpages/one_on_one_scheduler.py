@@ -243,7 +243,12 @@ if st.button("Try to generate schedule"):
         for i in range(tries):
             try:
                 all_pairings = make_pairing_graph(
-                    names, rounds_to_generate, preferences, set(tas), unavailability=unavailability
+                    names,
+                    rounds_to_generate,
+                    preferences,
+                    set(tas),
+                    unavailability=unavailability,
+                    seed=i,
                 )
                 st.success(f"Found a solution after {i + 1} attempts!")
                 break
