@@ -837,13 +837,18 @@ def make_pairing_graph(
     import networkx as nx
 
     meets_from_group = {name: 0 for name in names}
-    if len(names) % 2 == 1:
-        names.append("-")
+    # Always add a dummy "-" node so that any round whose available subgraph has
+    # odd cardinality (e.g. due to unavailability) can include it and rotate
+    # who gets left out. The matched "-" edge is removed each round, which
+    # forces "-" to pair with a different person next time.
+    names_with_dummy = names + ["-"]
 
     G = nx.Graph()
-    G.add_nodes_from(names)
+    G.add_nodes_from(names_with_dummy)
     # We make a complete graph
-    G.add_edges_from((name, match) for name in names for match in names if name != match)
+    G.add_edges_from(
+        (name, match) for name in names_with_dummy for match in names_with_dummy if name != match
+    )
     # We remove or update edges based on preferences
     for (a, b), weight in preferences.items():
         if weight == 0:
@@ -853,7 +858,7 @@ def make_pairing_graph(
     # Remove edges between members of the TA group
     G.remove_edges_from((a, b) for a in ta_group for b in ta_group if a != b)
 
-    all_pairings: dict[str, list[str]] = {name: ["-"] * rounds for name in names}
+    all_pairings: dict[str, list[str]] = {name: ["-"] * rounds for name in names_with_dummy}
 
     for round in range(rounds):
         # Adapt the weight of edges between non-meet group members to meetgroup
@@ -873,11 +878,16 @@ def make_pairing_graph(
                             ta_group_weight if meets_from_group[name] < max_meet_number else 1
                         )
 
-        # Exclude unavailable participants via a subgraph view (their edges survive in G)
+        # Exclude unavailable participants via a subgraph view (their edges survive in G).
+        # Include the dummy "-" only when the available set is odd, so it absorbs
+        # exactly one person per such round and rotates via edge removal.
         unavailable_this_round = {
             name for name, rounds_set in (unavailability or {}).items() if round in rounds_set
         }
-        graph_for_round = G.subgraph([n for n in G.nodes() if n not in unavailable_this_round])
+        available = [n for n in names if n not in unavailable_this_round]
+        if len(available) % 2 == 1:
+            available.append("-")
+        graph_for_round = G.subgraph(available)
 
         # Get a maximum matching
         matching: set[tuple[str, str]] = nx.max_weight_matching(graph_for_round)
@@ -888,10 +898,10 @@ def make_pairing_graph(
             all_pairings[a][round] = b
             all_pairings[b][round] = a
 
-            # Update the number of meetings with the group
-            if a in ta_group:
+            # Update the number of meetings with the group (dummy "-" doesn't count)
+            if a in ta_group and b != "-":
                 meets_from_group[b] += 1
-            elif b in ta_group:
+            elif b in ta_group and a != "-":
                 meets_from_group[a] += 1
 
     all_pairings.pop("-", None)
