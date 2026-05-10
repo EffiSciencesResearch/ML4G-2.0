@@ -56,6 +56,8 @@ with participant_col:
     )
     names = [name for name in names_input.splitlines() if name.strip()]
 
+names = names + tas
+
 rounds = st.slider(
     "Number of rounds of 1-1s", min_value=1, max_value=len(names) - 1, value=len(names) * 2 // 3
 )
@@ -128,8 +130,6 @@ else:
     preset_df = None
     preset_rounds = 0
     pairs_not_to_match = set()
-
-names = names + tas
 
 
 # Parse preferences
