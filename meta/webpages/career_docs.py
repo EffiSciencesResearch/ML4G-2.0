@@ -17,8 +17,8 @@ st.write(
     """
 # Career planning docs
 
-This page help to duplicate the career planning docs for all participants
-and share them with each of them individually.
+This page help to duplicate the career planning docs + weighted factor model
+templates for all participants and share them with each of them individually.
 
 First you can edit the participants list below right here, in CSV format if needed.
 
@@ -90,7 +90,7 @@ ok &= st.checkbox(
 ok &= st.checkbox("The folder for 1-1 docs gives write access to the bot.")
 st.write(f"Bot email: `{BOT_EMAIL}`")
 ok &= st.checkbox(
-    f"The template contains the placeholder `{to_replace}`, precisely and not something else."
+    f"The template contains the placeholder `{to_replace}`, precisely and not something else (only if Google Doc)."
 )
 ok &= st.checkbox(
     f"The filename `{doc_name}` contains `{to_replace}`.",
@@ -110,6 +110,7 @@ if st.button(
         copied_doc_id = API.copy_file(
             extract_id_from_url(template_url), extract_id_from_url(folder_url), new_name
         )
-        API.replace_in_document(copied_doc_id, "[NAME]", name)
+        if API.get_mime_type(copied_doc_id) == "application/vnd.google-apps.document":
+            API.replace_in_document(copied_doc_id, "[NAME]", name)
         API.share_document(copied_doc_id, email)
         st.write("✅")

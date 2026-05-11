@@ -91,6 +91,10 @@ class SimpleGoogleAPI:
         file_metadata = self.drive_service.files().get(fileId=file_id, fields="name").execute()
         return file_metadata["name"]
 
+    def get_mime_type(self, file_id: str) -> str:
+        file_metadata = self.drive_service.files().get(fileId=file_id, fields="mimeType").execute()
+        return file_metadata["mimeType"]
+
     def copy_file(self, file_id: str, folder_id: str, new_name: str | None = None) -> str:
         """Copy a presentation to a specified folder with a new name prefix."""
         if new_name is None:
