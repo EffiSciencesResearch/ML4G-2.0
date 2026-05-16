@@ -6,58 +6,8 @@ This folder contains helpful scripts to automate common tasks. No programming ex
 
 ## Table of Contents
 1. [Slack Message Scheduler](./slack_reminders/README.md) - Schedule Slack messages automatically
-2. [Google Docs Duplicator](#google-docs-duplicator) - Create personalized Google Docs for everyone
+2. [Google Ops](./google_ops/README.md) - Drive duplication, prefix renaming, per-person doc copies
 3. [Bootcamp Template Duplicator](#bootcamp-template-duplicator) - One-click duplicate the whole template tree for a new camp
-
----
-
-## Google Docs Duplicator
-
-**What it does:** Creates personalized copies of a Google Doc template for multiple people.
-
-### What You Need
-
-Before running this script, prepare:
-
-1. **A Google Drive folder** - Where the new documents will be stored
-2. **A Google Docs template** - The document you want to copy for everyone
-3. **A CSV file** - List of people (must have columns: `email` and `name`)
-
-   Example `names_and_emails.csv`:
-   ```
-   email,name
-   alice@example.com,Alice Smith
-   bob@example.com,Bob Jones
-   ```
-
-4. **A service account token** - This is a special file that lets the script access Google Drive
-   - Ask Diego for a `service_account_token.json` file, OR
-   - Get one from the Google Cloud Console (advanced users only)
-   - Give the service account:
-     - Write access to your Drive folder
-     - View access to your template document
-
-### How to Run It
-
-Open your terminal in the ML4G2.0 folder and run:
-
-```shell
-uv run python -m meta.googletools duplicate-career-docs names_and_emails.csv template_url drive_folder_url
-```
-
-Replace:
-- `names_and_emails.csv` - Path to your CSV file
-- `template_url` - The Google Docs URL of your template
-- `drive_folder_url` - The Google Drive folder URL where docs should be created
-
-**Example:**
-```shell
-uv run python -m meta.googletools duplicate-career-docs ./data/students.csv \
-  "https://docs.google.com/document/d/abc123..." \
-  "https://drive.google.com/drive/folders/xyz789..."
-```
-
-The script will create a personalized copy of the template for each person in your CSV and save it to the folder.
 
 ---
 
