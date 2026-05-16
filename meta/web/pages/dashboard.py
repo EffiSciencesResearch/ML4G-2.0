@@ -2,7 +2,7 @@ import streamlit as st
 import dotenv
 from streamlit_product_card import product_card
 
-from meta.utils.streamlit_utils import State, render_select_camp_message
+from meta.web.helpers import State, render_select_camp_message
 
 dotenv.load_dotenv()
 
@@ -33,12 +33,12 @@ st.subheader("Most useful tools")
 cols = st.columns(3)
 tools = [
     (
-        "webpages/edit_camp.py",
+        "pages/edit_camp.py",
         "🏠",
         "Get OpenAI keys, set participants and variables for everyone.",
     ),
-    ("webpages/career_docs.py", "📄", "Auto duplicate google docs for each participant."),
-    ("webpages/one_on_one_scheduler.py", "👥", "Schedule one-on-ones with participants."),
+    ("pages/career_docs.py", "📄", "Auto duplicate google docs for each participant."),
+    ("pages/one_on_one_scheduler.py", "👥", "Schedule one-on-ones with participants."),
 ]
 
 for i, (page, icon, description) in enumerate(tools):

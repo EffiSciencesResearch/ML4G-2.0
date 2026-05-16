@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-page_directory = (Path(__file__).parent / "webpages").resolve()
+page_directory = (Path(__file__).parent / "pages").resolve()
 
 pages = [
     ("🏠 Dashboard", "dashboard.py"),

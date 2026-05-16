@@ -3,7 +3,7 @@
 UV := uv
 
 run:
-	$(UV) run streamlit run meta/web.py --server.port 8991
+	PYTHONPATH=. $(UV) run streamlit run meta/web/main.py --server.port 8991
 
 run-changelog:
 	$(UV) run python meta/drive_changelog.py

@@ -1,8 +1,8 @@
 import os
 import streamlit as st
 
-from meta.utils.streamlit_utils import State, get_storage
-from meta.utils.camp_utils import Camp
+from meta.web.helpers import State, get_storage
+from meta.web.camps import Camp
 
 
 state = State()

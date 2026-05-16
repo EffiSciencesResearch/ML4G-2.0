@@ -13,4 +13,5 @@ RUN uv sync --frozen --no-default-groups --no-install-project
 COPY . .
 RUN uv sync --frozen --no-default-groups
 
-CMD ["/app/.venv/bin/streamlit", "run", "meta/web.py"]
+ENV PYTHONPATH=/app
+CMD ["/app/.venv/bin/streamlit", "run", "meta/web/main.py"]

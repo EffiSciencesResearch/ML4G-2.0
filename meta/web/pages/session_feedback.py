@@ -3,10 +3,10 @@ import plotly.express as px
 import pandas as pd
 import plotly.graph_objects as go
 
-from meta.utils.streamlit_utils import get_current_camp
+from meta.web.helpers import get_current_camp
 from meta.utils.google_utils import SimpleGoogleAPI
-from meta.utils.feedback_utils import FeedbackParser
-from meta.utils.streamlit_utils import State, render_select_camp_message
+from meta.web.feedback_parser import FeedbackParser
+from meta.web.helpers import State, render_select_camp_message
 
 # Expected column header patterns
 RATING_PATTERN = r"How would you rate the '(.*)'[^']*$"

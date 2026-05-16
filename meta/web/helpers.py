@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 
-from meta.utils.camp_utils import Camp
-from meta.utils.storage import Storage, get_storage as _get_storage
+from meta.web.camps import Camp
+from meta.web.storage import Storage, get_storage as _get_storage
 
 
 @st.cache_resource
