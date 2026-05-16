@@ -6,6 +6,6 @@ run:
 	PYTHONPATH=. $(UV) run streamlit run meta/web/main.py --server.port 8991
 
 run-changelog:
-	$(UV) run python meta/drive_changelog.py
+	$(UV) run python -m meta.drive_changelog
 
 .PHONY: run run-changelog
