@@ -2,7 +2,7 @@ import os
 import streamlit as st
 
 from meta.web.helpers import State, get_storage
-from meta.web.camps import Camp
+from meta.shared.camps import Camp
 
 
 state = State()

@@ -3,7 +3,7 @@ import datetime
 
 import streamlit as st
 
-from meta.web.openrouter import CAMP_KEY_DURATION_DAYS, CAMP_KEY_LIMIT_USD, OpenRouterAPIKey
+from meta.shared.openrouter import CAMP_KEY_DURATION_DAYS, CAMP_KEY_LIMIT_USD, OpenRouterAPIKey
 from meta.web.helpers import (
     State,
     edit_current_camp,

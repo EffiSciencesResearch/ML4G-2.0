@@ -4,7 +4,7 @@ import string
 from pydantic import BaseModel
 import random
 
-from meta.web.openrouter import OpenRouterAPIKey
+from meta.shared.openrouter import OpenRouterAPIKey
 
 
 class Camp(BaseModel):
