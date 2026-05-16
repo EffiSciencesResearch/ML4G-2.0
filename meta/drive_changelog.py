@@ -19,7 +19,7 @@ import requests
 import typer
 from pydantic import BaseModel, Field
 from googleapiclient.discovery import build
-from meta.utils.google_utils import load_service_account_credentials
+from meta.shared.google import load_service_account_credentials
 from googleapiclient.errors import HttpError
 import litellm
 from dotenv import load_dotenv

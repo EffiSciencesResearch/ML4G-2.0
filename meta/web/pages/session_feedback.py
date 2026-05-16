@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from meta.web.helpers import get_current_camp
-from meta.utils.google_utils import SimpleGoogleAPI
+from meta.shared.google import SimpleGoogleAPI
 from meta.web.feedback_parser import FeedbackParser
 from meta.web.helpers import State, render_select_camp_message
 
@@ -33,7 +33,7 @@ def load_feedback_data(url: str):
 @st.cache_data
 def extract_daily_trends(url: str, daily_questions):
     """Extract daily trend data for the three recurring questions."""
-    from meta.utils.google_utils import extract_id_from_url
+    from meta.shared.google import extract_id_from_url
 
     api = get_api()
     sheet_id = extract_id_from_url(url)

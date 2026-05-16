@@ -1,7 +1,7 @@
 import csv
 import streamlit as st
 from meta.web.helpers import get_current_camp
-from meta.utils.google_utils import extract_id_from_url, SimpleGoogleAPI
+from meta.shared.google import extract_id_from_url, SimpleGoogleAPI
 from meta.web.helpers import State
 
 state = State()

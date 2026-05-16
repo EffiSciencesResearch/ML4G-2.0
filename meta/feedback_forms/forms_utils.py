@@ -6,7 +6,7 @@ import yaml
 import os
 import pickle
 
-from meta.utils.google_utils import load_service_account_credentials
+from meta.shared.google import load_service_account_credentials
 from meta.feedback_forms.models import (
     AnyQuestionConfig,
     CampConfig,
