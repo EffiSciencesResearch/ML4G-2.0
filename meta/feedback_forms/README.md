@@ -115,9 +115,9 @@ uv run python -m meta.feedback_forms.models
 
 ## Usage
 
-Run the script:
+Run the script (from the repo root):
 ```bash
-python meta/feedback_forms/main.py
+uv run python -m meta.feedback_forms
 ```
 
 The script will:
