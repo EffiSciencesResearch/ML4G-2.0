@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import streamlit as st
 import dotenv
 from streamlit_product_card import product_card
@@ -31,26 +33,31 @@ Enjoy! :rocket:
 
 st.subheader("Most useful tools")
 cols = st.columns(3)
+META = Path(__file__).resolve().parent.parent.parent
 tools = [
     (
-        "pages/edit_camp.py",
+        META / "web" / "pages" / "edit_camp.py",
         "🏠",
         "Get OpenAI keys, set participants and variables for everyone.",
     ),
-    ("pages/career_docs.py", "📄", "Auto duplicate google docs for each participant."),
-    ("pages/one_on_one_scheduler.py", "👥", "Schedule one-on-ones with participants."),
+    (META / "career_docs" / "web.py", "📄", "Auto duplicate google docs for each participant."),
+    (META / "one_on_ones" / "web.py", "👥", "Schedule one-on-ones with participants."),
 ]
 
 for i, (page, icon, description) in enumerate(tools):
     with cols[i]:
-        title = page.split("/")[-1].replace("_", " ").replace(".py", "").title()
+        title = (
+            page.parent.name.replace("_", " ").title()
+            if page.name == "web.py"
+            else page.stem.replace("_", " ").title()
+        )
         was_clicked = product_card(
             product_name=f"{icon} {title}",
             description=description,
             key=f"tool_{i}",
         )
         if was_clicked:
-            st.switch_page(page)
+            st.switch_page(str(page))
 
 
 if not state.current_camp:

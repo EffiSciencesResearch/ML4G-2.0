@@ -4,29 +4,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-page_directory = (Path(__file__).parent / "pages").resolve()
+META = Path(__file__).resolve().parent.parent
 
-pages = [
-    ("🏠 Dashboard", "dashboard.py"),
-    ("Career Docs", "career_docs.py"),
-    ("Edit Camp", "edit_camp.py"),
+# Pages are registered explicitly: title, path. The path may point into any
+# tool folder (vertical layout) or into meta/web/pages/ (frame pages like
+# the dashboard and camp CRUD).
+PAGES = [
+    ("🏠 Dashboard", META / "web" / "pages" / "dashboard.py"),
+    ("Career Docs", META / "career_docs" / "web.py"),
+    ("Edit Camp", META / "web" / "pages" / "edit_camp.py"),
+    ("Create Camp", META / "web" / "pages" / "create_camp.py"),
+    ("One on One Scheduler", META / "one_on_ones" / "web.py"),
+    ("Session Feedback", META / "web" / "pages" / "session_feedback.py"),
 ]
 
-# Add pages not in the list above
-already_listed = [p[1] for p in pages]
-for file in page_directory.glob("*.py"):
-    if file.name not in already_listed:
-        pages.append((file.stem.replace("_", " ").title(), file.name))
+
+def _url_path(path: Path) -> str:
+    # Use the parent folder name for tool pages (meta/<tool>/web.py) and
+    # the filename for frame pages (meta/web/pages/<name>.py).
+    return path.parent.name if path.name == "web.py" else path.stem
 
 
 page = st.navigation(
     [
-        st.Page(
-            page_directory / p,
-            title=title,
-            default=(i == 0),
-        )
-        for i, (title, p) in enumerate(pages)
+        st.Page(path, title=title, url_path=_url_path(path), default=(i == 0))
+        for i, (title, path) in enumerate(PAGES)
     ]
 )
 page.run()
