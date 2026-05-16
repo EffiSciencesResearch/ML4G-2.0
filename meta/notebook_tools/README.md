@@ -22,3 +22,8 @@ uv run python -m meta.notebook_tools neat workshops/
 uv run python -m meta.notebook_tools sync workshops/my_workshop/my_workshop.ipynb
 uv run python -m meta.notebook_tools check_links --curl
 ```
+
+## Troubleshooting
+
+- `fix_typos` errors with auth issues: ensure `OPENAI_API_KEY` is set in your environment (or `.env`).
+- `check_links` flags links you know are fine: rate-limited hosts (GitHub raw, Colab) sometimes return 429 — re-run, or trust the manual check.

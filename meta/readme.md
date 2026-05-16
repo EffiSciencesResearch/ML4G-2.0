@@ -1,57 +1,26 @@
-# ML4G Automation Tools - User Guide
+# ML4G Internal Tools
 
-This folder contains helpful scripts to automate common tasks. No programming experience needed!
+This folder contains all the internal tools we use to run ML4G bootcamps. Each subfolder is a self-contained tool with its own README; this page is just an index.
 
----
+## Python tools
 
-## Table of Contents
-1. [Slack Message Scheduler](./slack_reminders/README.md) - Schedule Slack messages automatically
-2. [Google Ops](./google_ops/README.md) - Drive duplication, prefix renaming, per-person doc copies
-3. [Bootcamp Template Duplicator](#bootcamp-template-duplicator) - One-click duplicate the whole template tree for a new camp
+- **[Slack Message Scheduler](./slack_reminders/README.md)** — schedule Slack messages from CSV/YAML, export channel members, manage scheduled drops.
+- **[Google Ops](./google_ops/README.md)** — Drive duplication, per-person doc copies, folder prefix renaming.
+- **[Feedback Forms](./feedback_forms/README.md)** — generate the daily Google Forms feedback questionnaire for each day of a camp.
+- **[Notebook Tools](./notebook_tools/README.md)** — workshop-authoring CLI: clean + badge + format `.ipynb` files, generate exercise notebooks from solutions, check links, fix typos.
+- **[One-on-Ones](./one_on_ones/README.md)** — pairing-graph algorithm for one-on-one scheduling (the [web UI](./web/README.md) is the recommended interface).
+- **[Drive Changelog](./drive_changelog/README.md)** — currently unused, kept around.
 
----
+## Internal web app
 
-## Bootcamp Template Duplicator
+- **[Streamlit dashboard](./web/README.md)** — internal UI for camp creation, career-doc duplication, feedback analysis, one-on-one scheduling.
 
-**What it does:** Duplicates the whole bootcamp Drive template tree (folders,
-docs, slides, sheets, forms) in one click, with `{{VAR}}` substitution in
-titles and bodies, link rewriting, and permission replay. Designed to replace
-the manual ~20-times-a-year cloning ritual.
+## Apps Script tools
 
-Unlike the Python "Google Docs Duplicator" above (which makes per-person
-copies of a single doc), this one duplicates a whole tree for a new camp.
+- **[Timetable Tools](./timetable_tools/readme.md)** — Bootcamp Tools menu added to the timetable Google Sheet (participant view, day-header dating).
+- **[Bootcamp Template Duplicator](./template_duplicator/README.md)** — one-click duplication of the whole bootcamp Drive template tree.
 
-### How to use it
+## Getting help
 
-Open the **New camp template duplicator** Google Sheet, then:
-
-1. Fill in the **Template Variables** table — at minimum `LONG_NAME` and
-   `_FOLDER_OR_DOC_TO_DUPLICATE` (which points to the template root folder).
-2. Menu: **Template Duplicator → Duplicate template…**
-3. First time only, grant the OAuth scopes it asks for.
-4. Wait for the toast notifications. The final dialog gives you a link to
-   the new folder and flags any unknown `{{NAME}}` placeholders it found.
-
-The new tree is placed as a sibling of the duplicator spreadsheet itself, so
-keep that spreadsheet inside the year's parent folder.
-
-### When something looks off
-
-- Open the **Run log** sheet inside the duplicator spreadsheet — every error,
-  retry, and unknown-placeholder gets a row.
-- For a fresh diagnostic, the menu has `Debug: chip URIs` and
-  `Debug: dump variables`.
-
-### Developer notes
-
-Source lives in [`meta/template_duplicator/`](./template_duplicator/) and is
-deployed via `clasp push -f`. See its [README](./template_duplicator/README.md)
-for the file layout and how the substitution pipeline works.
-
----
-
-## Getting Help
-
-- Check the full documentation in each Python file for advanced options
-- For Slack message scheduling, see [slack_reminders/README.md](./slack_reminders/README.md)
-- Ask Diego if you get stuck!
+- Each tool's README is the source of truth for how to run it. Start there.
+- Ask Diego on Slack if you get stuck.

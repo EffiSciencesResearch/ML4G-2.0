@@ -132,12 +132,14 @@ The script will:
 
 ```
 meta/feedback_forms/
-├── main.py          # Main script
-├── utils.py         # Helper functions
+├── cli.py           # Main script (entry point for `python -m meta.feedback_forms`)
+├── forms_utils.py   # Helper functions
+├── models.py        # Pydantic config models + schema generator
 ├── config.yaml      # Configuration file
+├── config.schema.json  # Generated schema for editor autocompletion
 ├── creds.json       # OAuth credentials (git-ignored)
 ├── token.pickle     # Cached auth token (git-ignored)
-└── memes/          # Meme images for each day
+└── memes/           # Meme images for each day
     ├── doge.png
     ├── drake.png
     └── ...
@@ -159,6 +161,6 @@ meta/feedback_forms/
 ## Adding New Features
 
 To add new question types or features:
-1. Add the question creation function in `utils.py`
+1. Add the question creation function in `forms_utils.py`
 2. Update `create_question_from_config()` to handle the new type
 3. Document the new type in this README
