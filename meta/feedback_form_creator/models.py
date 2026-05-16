@@ -44,6 +44,16 @@ AnyQuestionConfig = Union[
 ]
 
 
+class ImageItem(BaseModel):
+    """Non-question form item: an image embedded in the form (matches Google
+    Forms' `Item.imageItem`). Kept separate from the question union since it has
+    no `text` / `kind` and requires uploading to Drive before insertion."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    filename: str
+
+
 class SessionConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

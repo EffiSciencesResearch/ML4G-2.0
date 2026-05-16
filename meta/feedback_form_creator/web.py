@@ -4,12 +4,12 @@ from googleapiclient.errors import HttpError
 from pydantic import ValidationError
 from streamlit_ace import st_ace
 
-from meta.feedback_form_creator.cli import create_daily_feedback_form
+from meta.feedback_form_creator.cli import build_question_plan, create_daily_feedback_form
 from meta.feedback_form_creator.forms_utils import (
     get_drive_service,
     get_forms_service,
 )
-from meta.feedback_form_creator.models import CampConfig, DayConfig
+from meta.feedback_form_creator.models import CampConfig, ImageItem
 from meta.shared.google import service_account_email
 from meta.web.helpers import (
     State,
@@ -101,26 +101,13 @@ if not day_name:
 day_number = day_names.index(day_name) + 1
 day_config = parsed.timetable[day_name]
 
-
-def _preview_question_titles(config: CampConfig, day: DayConfig) -> list[str]:
-    """Mirrors create_daily_feedback_form to list the question titles that would be created."""
-    titles = [q.text for q in config.pre_questions]
-    for s in day.sessions:
-        titles.append(f"How would you rate the '{s.name}' session?")
-        if s.reading_group:
-            titles.append(f"Which teacher facilitated the '{s.name}' reading group?")
-        titles.append(f"Any additional feedback on '{s.name}'?")
-    titles.extend(q.text for q in day.day_questions)
-    titles.extend(q.text for q in config.post_questions)
-    if day.meme:
-        titles.append("Provide a caption for this meme that describes your day!")
-    return titles
-
-
-titles = _preview_question_titles(parsed, day_config)
-with st.expander(f"Preview: {len(titles)} questions would be created", expanded=True):
-    for t in titles:
-        st.markdown(f"- {t}")
+plan = build_question_plan(parsed, day_config)
+with st.expander(f"Preview: {len(plan)} items would be created", expanded=True):
+    for item in plan:
+        if isinstance(item, ImageItem):
+            st.markdown(f"- 🖼️ *meme: {item.filename}*")
+        else:
+            st.markdown(f"- {item.text}")
 
 
 def _render_folder_access_error(folder_id: str, error: HttpError) -> None:

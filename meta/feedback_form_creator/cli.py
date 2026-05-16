@@ -5,6 +5,8 @@ Main script to create daily feedback forms for a multi-day camp.
 
 import sys
 import os
+from typing import Union
+
 from meta.feedback_form_creator.forms_utils import (
     get_forms_service,
     get_drive_service,
@@ -12,32 +14,36 @@ from meta.feedback_form_creator.forms_utils import (
     create_base_form,
     add_questions_to_form,
     create_question_from_config,
-    create_scale_question,
-    create_text_question,
-    create_paragraph_question,
-    create_choice_question,
     upload_image_to_drive_and_get_url,
     create_image_item_with_url,
     move_file_to_folder,
 )
 from meta.feedback_form_creator.models import (
+    AnyQuestionConfig,
     CampConfig,
     ChoiceQuestionConfig,
     DayConfig,
+    ImageItem,
     ParagraphQuestionConfig,
     ScaleQuestionConfig,
-    SessionConfig,
     TextQuestionConfig,
 )
 
 
-def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str]):
-    """Create rating and feedback questions for each session."""
-    questions = []
+PlanItem = Union[AnyQuestionConfig, ImageItem]
 
-    for session in sessions:
-        # Mandatory rating question (1-5 scale)
-        rating_question = create_scale_question(
+
+def build_question_plan(config: CampConfig, day_config: DayConfig) -> list[PlanItem]:
+    """Build the ordered list of form items for a single day.
+
+    Single source of truth for what the form will contain. Used by both the
+    creator (which then calls the Google Forms API for each item) and the
+    web-page preview (which renders titles).
+    """
+    plan: list[PlanItem] = list(config.pre_questions)
+
+    for session in day_config.sessions:
+        plan.append(
             ScaleQuestionConfig(
                 kind="scale",
                 text=f"How would you rate the '{session.name}' session?",
@@ -48,31 +54,37 @@ def create_lecture_questions(sessions: list[SessionConfig], teachers: list[str])
                 high_label="Excellent",
             )
         )
-        questions.append(rating_question)
-
-        # If it's a reading group, add teacher facilitation question
         if session.reading_group:
-            teacher_question = create_choice_question(
+            plan.append(
                 ChoiceQuestionConfig(
                     kind="choice",
                     text=f"Which teacher facilitated the '{session.name}' reading group?",
-                    choices=teachers,
+                    choices=config.teachers,
                     mandatory=False,
                 )
             )
-            questions.append(teacher_question)
-
-        # Optional feedback question - USE PARAGRAPH instead of text
-        feedback_question = create_paragraph_question(
+        plan.append(
             ParagraphQuestionConfig(
                 kind="paragraph",
                 text=f"Any additional feedback on '{session.name}'?",
                 mandatory=False,
             )
         )
-        questions.append(feedback_question)
 
-    return questions
+    plan.extend(day_config.day_questions)
+    plan.extend(config.post_questions)
+
+    if day_config.meme:
+        plan.append(ImageItem(filename=day_config.meme))
+        plan.append(
+            TextQuestionConfig(
+                kind="text",
+                text="Provide a caption for this meme that describes your day!",
+                mandatory=False,
+            )
+        )
+
+    return plan
 
 
 def create_daily_feedback_form(
@@ -84,77 +96,34 @@ def create_daily_feedback_form(
     day_config: DayConfig,
 ):
     """Create a feedback form for a specific day."""
-    # Create form title
     form_title = f"{config.camp_name} Day {day_number} Feedback Form"
-
     print(f"Creating form: {form_title}")
 
-    # Create the base form with description
     form_id, form = create_base_form(service, form_title, config.form_description)
 
-    # Move the newly created form to the specified folder
     if config.drive_folder_id:
         move_file_to_folder(drive_service, form_id, config.drive_folder_id)
         print("  ✓ Form moved to Drive folder")
 
-    # Prepare all questions
-    all_questions = []
+    memes_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memes")
 
-    # Add pre-questions
-    print(f"  Adding {len(config.pre_questions)} pre-questions...")
-    for q_config in config.pre_questions:
-        question = create_question_from_config(q_config)
-        all_questions.append(question)
-
-    # Add session-specific questions
-    print(f"  Adding questions for {len(day_config.sessions)} sessions...")
-    lecture_questions = create_lecture_questions(day_config.sessions, config.teachers)
-    all_questions.extend(lecture_questions)
-
-    # Add day-specific extra questions (if any)
-    if day_config.day_questions:
-        print(f"  Adding {len(day_config.day_questions)} day-specific questions...")
-        for q_config in day_config.day_questions:
-            question = create_question_from_config(q_config)
-            all_questions.append(question)
-
-    # Add post-questions
-    print(f"  Adding {len(config.post_questions)} post-questions...")
-    for q_config in config.post_questions:
-        question = create_question_from_config(q_config)
-        all_questions.append(question)
-
-    # Add meme image and caption question if specified
-    if day_config.meme:
-        print(f"  Adding meme: {day_config.meme}")
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        meme_path = os.path.join(script_dir, "memes", day_config.meme)
-
-        # Upload image to Drive and get URL
-        image_url = upload_image_to_drive_and_get_url(drive_service, meme_path)
-        print(f"    Uploaded to Drive: {image_url}")
-
-        # Add meme image
-        meme_image = create_image_item_with_url(image_url)
-        all_questions.append(meme_image)
-
-        # Add caption question
-        caption_question = create_text_question(
-            TextQuestionConfig(
-                kind="text",
-                text="Provide a caption for this meme that describes your day!",
-                mandatory=False,
+    items = []
+    for plan_item in build_question_plan(config, day_config):
+        if isinstance(plan_item, ImageItem):
+            print(f"  Adding image: {plan_item.filename}")
+            url = upload_image_to_drive_and_get_url(
+                drive_service, os.path.join(memes_dir, plan_item.filename)
             )
-        )
-        all_questions.append(caption_question)
+            print(f"    Uploaded to Drive: {url}")
+            items.append(create_image_item_with_url(url))
+        else:
+            items.append(create_question_from_config(plan_item))
 
-    # Add all questions to the form
-    add_questions_to_form(service, form_id, all_questions)
+    add_questions_to_form(service, form_id, items)
 
-    print("  ✓ Form created successfully!")
+    print(f"  ✓ Form created with {len(items)} items.")
     print(f"  Edit URL: https://docs.google.com/forms/d/{form_id}/edit")
     print(f"  Live URL: {form['responderUri']}")
-
     print()
 
     return form_id, form
