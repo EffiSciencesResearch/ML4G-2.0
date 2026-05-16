@@ -1,166 +1,89 @@
-# Automated Feedback Form Generator
+# Feedback Form Creator
 
-This tool automatically creates daily feedback forms for ML4Good camps using the Google Forms API.
+Creates the daily Google Forms feedback questionnaire for each day of a camp.
+Two interfaces share the same form-builder code:
 
-## Features
+- **Web UI**: the **Feedback Form Creator** page of the [internal Streamlit app](../web/README.md). The YAML config lives on the camp object (`camp.feedback_config_yaml`); the page renders it in a code editor, validates it, and creates the form for the selected day.
+- **CLI**: `uv run python -m meta.feedback_form_creator` — interactive prompt that picks a day from `meta/feedback_form_creator/config.yaml` and creates that day's form.
 
-- 📝 Generates structured feedback forms for each day of the camp
-- 🎯 Includes pre-questions, session ratings, day-specific questions, and post-questions
-- 🎨 Adds fun memes to each form for engagement
-- 📁 Organizes forms in a Google Drive folder
-- 🔐 Secure authentication with credential caching
-
-## Prerequisites
-
-- Python 3.11 (as specified in `pyproject.toml`)
-- Google account with access to Google Forms and Google Drive
-- `uv` for dependency management
-
-## Setup Instructions
-
-### 1. Install Dependencies
-
-```bash
-# Install all dependencies
-uv sync
-
-# Activate the environment
-source .venv/bin/activate  # On macOS/Linux
-# or
-.venv\Scripts\activate  # On Windows
-```
-
-### 2. Set Up Google OAuth Credentials
-
-You need to create OAuth credentials to allow the script to access Google Forms and Drive APIs:
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-2. Create a new project or select an existing one
-3. Enable the following APIs:
-   - Google Forms API
-   - Google Drive API
-4. Create credentials:
-   - Click "Create Credentials" → "OAuth client ID"
-   - Choose "Desktop app" as the application type
-   - Give it a name (e.g., "ML4G Feedback Forms")
-   - Download the JSON file
-5. Save the downloaded file as `meta/feedback_form_creator/creds.json`
-
-### 3. First-Time Authentication
-
-When you run the script for the first time:
-
-1. It will open your browser automatically
-2. Log in with your Google account
-3. Grant the requested permissions (Forms and Drive access)
-4. The browser will show "The authentication flow has completed"
-5. A `token.pickle` file will be created to store your credentials for future use
+For most camps you'll use the web UI. The CLI is what we used historically and still works.
 
 ## Configuration
 
-Edit `meta/feedback_form_creator/config.yaml` to customize for your camp:
-
-### Essential Settings to Change
+The config is YAML with the structure defined in [`models.py`](./models.py) (`CampConfig`). Highlights:
 
 ```yaml
-# Camp name - appears in form titles
-camp_name: "ML4good Italy 2025"
-
-# Google Drive folder ID where form shortcuts will be created
-# Get this from the folder URL: https://drive.google.com/drive/folders/[FOLDER_ID]
-drive_folder_id: "your-folder-id-here"
-
-# List of teachers/TAs
-teachers:
-  - "Diego"
-  - "Julian"
-  - "T-bo"
-  - "Linda"
+camp_name: "ML4good UK 2025"          # appears in form titles
+drive_folder_id: "1A..."              # forms get moved into this Drive folder
+teachers: [Diego, Rich, Elsa, Joël]
+form_description: |
+  ...intro shown at the top of every form...
+pre_questions:                        # asked at the top of every day's form
+  - text: Name
+    kind: choice
+    choices: [Alice, Bob]
+    mandatory: true
+timetable:                            # one entry per camp day
+  day_1:
+    meme: drake.png                   # see ./memes/ for available images
+    sessions:
+      - name: Opening session
+      - name: Chapter 1
+        reading_group: true           # adds a "who facilitated?" question
+    day_questions:                    # optional, day-specific extras
+      - text: "Are you well settled?"
+        kind: paragraph
+post_questions:                       # asked at the end of every day's form
+  - text: "How would you rate today?"
+    kind: scale
 ```
 
-### Customizing the Schedule
+For each `day_N`, the generated form contains: pre-questions → per-session rating + (reading-group teacher choice) + feedback → day-specific questions → post-questions → meme image + caption.
 
-Each day in the timetable has:
-- `meme`: Fun image for the day (must exist in `memes/` folder)
-- `sessions`: List of workshop/session names
-- `day_questions` (optional): Extra questions specific to that day
+The exact list for any given day is shown by the **Preview** in the web UI; under the hood, `build_question_plan` in `cli.py` is the single source of truth.
 
-Example day configuration:
-```yaml
-day_1:
-  meme: "doge.png"
-  sessions:
-    - name: "Intro to AI Safety"
-    - name: "Chapter 1 Capabilities"
-      reading_group: true  # Adds teacher selection question
-    - name: "Agents Workshop"
-  day_questions:  # Optional day-specific questions
-    - text: "What was your favorite part of day 1?"
-      kind: "paragraph"
-      mandatory: false
-```
+### VS Code autocompletion
 
-### Editor Integration (VSCode)
+`config.schema.json` is wired up in `.vscode/settings.json`. Install the [Red Hat YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml). Regenerate after editing `models.py`:
 
-To get autocompletion and validation for `config.yaml` in VSCode:
-
-1.  **Install the YAML extension**: Install the [YAML extension by Red Hat](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) from the VSCode Marketplace.
-2.  **Reload VSCode**: The schema is already configured in `.vscode/settings.json`.
-
-To regenerate the schema after changing `models.py`, run:
 ```bash
 uv run python -m meta.feedback_form_creator.models
 ```
 
+### Memes
 
-## Usage
+Drop a `.png` or `.jpg` into [`memes/`](./memes/) and reference it by filename under `day_N.meme`. See [memes/README.md](./memes/) for the gallery of what's currently available.
 
-Run the script (from the repo root):
-```bash
-uv run python -m meta.feedback_form_creator
-```
+## Authentication
 
-The script will:
-1. Show available days from your config
-2. Ask which day to create
-3. Generate the form with all configured questions
-4. Upload any meme images to Drive
-5. Create a shortcut in your specified Drive folder
-6. Display the form URLs
+Two auth paths, in order of preference:
 
-## File Structure
+1. **Service account** (used by the deployed web app and the recommended way locally): set `SERVICE_ACCOUNT_JSON` env var to the contents of a Google Cloud service-account key. The same key is used by other Drive-backed pages.
+2. **OAuth2** (CLI-only fallback): drop `creds.json` from [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (Desktop OAuth client) into this folder. On first run, a browser window opens; `token.pickle` is then cached for subsequent runs.
+
+In both cases, the **Google Forms API** and **Google Drive API** must be enabled in the relevant Cloud project, and the bot must have **Editor** rights on the target `drive_folder_id`. The web UI surfaces a targeted "give Editor to `<bot>` on the folder" message on 403.
+
+`creds.json` and `token.pickle` are gitignored — never commit them.
+
+## File structure
 
 ```
 meta/feedback_form_creator/
-├── cli.py           # Main script (entry point for `python -m meta.feedback_form_creator`)
-├── forms_utils.py   # Helper functions
-├── models.py        # Pydantic config models + schema generator
-├── config.yaml      # Configuration file
-├── config.schema.json  # Generated schema for editor autocompletion
-├── creds.json       # OAuth credentials (git-ignored)
-├── token.pickle     # Cached auth token (git-ignored)
-└── memes/           # Meme images for each day
-    ├── doge.png
-    ├── drake.png
-    └── ...
+├── web.py            # Streamlit page (Feedback Form Creator)
+├── cli.py            # CLI entry point + build_question_plan + create_daily_feedback_form
+├── forms_utils.py    # Google Forms/Drive API wrappers
+├── models.py         # Pydantic config models + schema generator
+├── config.yaml       # Sample / CLI config
+├── config.schema.json
+└── memes/
+    ├── README.md     # gallery of available images
+    └── *.png, *.jpg
 ```
 
-## Security Notes
+## Adding a new question kind
 
-- `creds.json` and `token.pickle` are automatically git-ignored
-- Never commit these files to version control
-- Each user needs their own OAuth credentials
+1. Add the Pydantic model in [`models.py`](./models.py) and include it in `AnyQuestionConfig`.
+2. Add an `if config.kind == "..."` branch to `create_question_from_config()` in [`forms_utils.py`](./forms_utils.py).
+3. Regenerate the schema (`uv run python -m meta.feedback_form_creator.models`).
 
-## Troubleshooting
-
-- **"Missing Google OAuth credentials"**: You need to download `creds.json` from Google Cloud Console
-- **"The authentication flow has completed"**: Close the browser tab and check the terminal
-- **Meme not found**: Ensure the meme filename in config.yaml exists in the `memes/` folder
-- **Permission denied**: Make sure you enabled both Forms and Drive APIs in Google Cloud Console
-
-## Adding New Features
-
-To add new question types or features:
-1. Add the question creation function in `forms_utils.py`
-2. Update `create_question_from_config()` to handle the new type
-3. Document the new type in this README
+The new kind is automatically picked up by both the web preview and the form creator via `build_question_plan`.
