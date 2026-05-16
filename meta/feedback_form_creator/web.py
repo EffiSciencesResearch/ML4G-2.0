@@ -9,7 +9,7 @@ from meta.feedback_form_creator.forms_utils import (
     get_drive_service,
     get_forms_service,
 )
-from meta.feedback_form_creator.models import CampConfig
+from meta.feedback_form_creator.models import CampConfig, DayConfig
 from meta.shared.google import service_account_email
 from meta.web.helpers import (
     State,
@@ -17,6 +17,8 @@ from meta.web.helpers import (
     get_current_camp,
     render_select_camp_message,
 )
+
+REPO = "https://github.com/EffiSciencesResearch/ML4G-2.0/blob/master/meta/feedback_form_creator"
 
 state = State()
 
@@ -35,10 +37,11 @@ st.write(f"Editing feedback config for camp `{camp.name}`.")
 # --- Config editor -----------------------------------------------------------
 
 st.subheader("Config")
-st.caption(
-    "Paste or edit the YAML config for this camp's daily feedback forms. "
-    "Schema is the same as `meta/feedback_form_creator/config.yaml`; the "
-    f"`camp_name` field is taken from the camp ({camp.name}) so you can omit it."
+st.write(
+    "Edit the YAML config for this camp's daily feedback forms. "
+    f"`camp_name` defaults to `{camp.name}` so you can omit it. "
+    f"See the [schema]({REPO}/models.py) for what's possible, "
+    f"and the [available memes]({REPO}/memes) to set per day."
 )
 
 yaml_text = st_ace(
@@ -48,7 +51,7 @@ yaml_text = st_ace(
     keybinding="vscode",
     show_gutter=True,
     auto_update=True,
-    height=500,
+    height=1000,
     key="feedback_yaml",
 )
 
@@ -98,7 +101,26 @@ if not day_name:
 day_number = day_names.index(day_name) + 1
 day_config = parsed.timetable[day_name]
 
-st.write(f"**{len(day_config.sessions)}** session(s) on `{day_name}`.")
+
+def _preview_question_titles(config: CampConfig, day: DayConfig) -> list[str]:
+    """Mirrors create_daily_feedback_form to list the question titles that would be created."""
+    titles = [q.text for q in config.pre_questions]
+    for s in day.sessions:
+        titles.append(f"How would you rate the '{s.name}' session?")
+        if s.reading_group:
+            titles.append(f"Which teacher facilitated the '{s.name}' reading group?")
+        titles.append(f"Any additional feedback on '{s.name}'?")
+    titles.extend(q.text for q in day.day_questions)
+    titles.extend(q.text for q in config.post_questions)
+    if day.meme:
+        titles.append("Provide a caption for this meme that describes your day!")
+    return titles
+
+
+titles = _preview_question_titles(parsed, day_config)
+with st.expander(f"Preview: {len(titles)} questions would be created", expanded=True):
+    for t in titles:
+        st.markdown(f"- {t}")
 
 
 def _render_folder_access_error(folder_id: str, error: HttpError) -> None:
