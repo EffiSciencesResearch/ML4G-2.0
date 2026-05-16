@@ -1,13 +1,16 @@
 import streamlit as st
 import yaml
+from googleapiclient.errors import HttpError
 from pydantic import ValidationError
+from streamlit_ace import st_ace
 
+from meta.feedback_form_creator.cli import create_daily_feedback_form
 from meta.feedback_form_creator.forms_utils import (
     get_drive_service,
     get_forms_service,
 )
 from meta.feedback_form_creator.models import CampConfig
-from meta.feedback_form_creator.cli import create_daily_feedback_form
+from meta.shared.google import service_account_email
 from meta.web.helpers import (
     State,
     edit_current_camp,
@@ -34,20 +37,23 @@ st.write(f"Editing feedback config for camp `{camp.name}`.")
 st.subheader("Config")
 st.caption(
     "Paste or edit the YAML config for this camp's daily feedback forms. "
-    "Schema is the same as `meta/feedback_form_creator/config.yaml`; the `camp_name` field "
-    f"is taken from the camp ({camp.name}) so you can omit it here."
+    "Schema is the same as `meta/feedback_form_creator/config.yaml`; the "
+    f"`camp_name` field is taken from the camp ({camp.name}) so you can omit it."
 )
 
-yaml_text = st.text_area(
-    label="config.yaml",
+yaml_text = st_ace(
     value=camp.feedback_config_yaml,
+    language="yaml",
+    theme="github",
+    keybinding="vscode",
+    show_gutter=True,
+    auto_update=True,
     height=500,
     key="feedback_yaml",
-    label_visibility="collapsed",
 )
 
 
-def _parse(text: str) -> CampConfig | None:
+def _parse(text: str) -> CampConfig:
     raw = yaml.safe_load(text) or {}
     raw.setdefault("camp_name", camp.name)
     return CampConfig.model_validate(raw)
@@ -86,11 +92,27 @@ if not parsed:
     st.stop()
 
 day_names = list(parsed.timetable.keys())
-day_name = st.selectbox("Day", day_names)
+day_name = st.pills("Day", options=day_names, default=day_names[0])
+if not day_name:
+    st.stop()
 day_number = day_names.index(day_name) + 1
 day_config = parsed.timetable[day_name]
 
 st.write(f"**{len(day_config.sessions)}** session(s) on `{day_name}`.")
+
+
+def _render_folder_access_error(folder_id: str, error: HttpError) -> None:
+    folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
+    if error.resp.status == 403:
+        bot = service_account_email()
+        if bot:
+            st.error(
+                f"The bot can't access this Drive folder. Give **Editor** rights "
+                f"to `{bot}` on [the folder]({folder_url}) and try again."
+            )
+            return
+    st.error(f"Cannot access Drive folder [{folder_id}]({folder_url}): {error}")
+
 
 if st.button(f"Create form for {day_name}", type="primary"):
     with st.spinner("Authenticating with Google..."):
@@ -102,8 +124,8 @@ if st.button(f"Create form for {day_name}", type="primary"):
             drive_service.files().get(
                 fileId=parsed.drive_folder_id, fields="id", supportsAllDrives=True
             ).execute()
-        except Exception as e:
-            st.error(f"Cannot access Drive folder `{parsed.drive_folder_id}`: {e}")
+        except HttpError as e:
+            _render_folder_access_error(parsed.drive_folder_id, e)
             st.stop()
 
     with st.spinner(f"Creating form for {day_name}..."):

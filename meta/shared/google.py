@@ -73,6 +73,17 @@ def load_service_account_credentials(scopes: list[str]) -> service_account.Crede
     )
 
 
+def service_account_email() -> str | None:
+    """Return the bot's client_email if SERVICE_ACCOUNT_JSON is configured, else None."""
+    raw = os.environ.get("SERVICE_ACCOUNT_JSON")
+    if not raw:
+        return None
+    try:
+        return json.loads(raw).get("client_email")
+    except json.JSONDecodeError:
+        return None
+
+
 class SimpleGoogleAPI:
     def __init__(self):
         scopes = [
