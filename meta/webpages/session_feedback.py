@@ -3,10 +3,10 @@ import plotly.express as px
 import pandas as pd
 import plotly.graph_objects as go
 
-from utils.streamlit_utils import get_current_camp
-from utils.google_utils import SimpleGoogleAPI
-from utils.feedback_utils import FeedbackParser
-from utils.streamlit_utils import State, render_select_camp_message
+from meta.utils.streamlit_utils import get_current_camp
+from meta.utils.google_utils import SimpleGoogleAPI
+from meta.utils.feedback_utils import FeedbackParser
+from meta.utils.streamlit_utils import State, render_select_camp_message
 
 # Expected column header patterns
 RATING_PATTERN = r"How would you rate the '(.*)'[^']*$"
@@ -33,7 +33,7 @@ def load_feedback_data(url: str):
 @st.cache_data
 def extract_daily_trends(url: str, daily_questions):
     """Extract daily trend data for the three recurring questions."""
-    from utils.google_utils import extract_id_from_url
+    from meta.utils.google_utils import extract_id_from_url
 
     api = get_api()
     sheet_id = extract_id_from_url(url)

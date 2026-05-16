@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from utils.google_utils import SimpleGoogleAPI, extract_id_from_url
+from meta.utils.google_utils import SimpleGoogleAPI, extract_id_from_url
 
 
 @dataclass

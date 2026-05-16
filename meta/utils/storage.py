@@ -6,7 +6,7 @@ from pathlib import Path
 import boto3
 from dotenv import load_dotenv
 
-from utils.camp_utils import Camp
+from meta.utils.camp_utils import Camp
 
 load_dotenv()
 

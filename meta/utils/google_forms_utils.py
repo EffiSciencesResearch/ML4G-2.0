@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from googleapiclient.discovery import build
 
-from utils.google_utils import SimpleGoogleAPI
+from meta.utils.google_utils import SimpleGoogleAPI
 
 
 @dataclass

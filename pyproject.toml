@@ -71,7 +71,7 @@ workshops = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["meta"]
+pythonpath = ["."]
 
 [tool.uv]
 constraint-dependencies = [

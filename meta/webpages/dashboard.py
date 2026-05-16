@@ -2,7 +2,7 @@ import streamlit as st
 import dotenv
 from streamlit_product_card import product_card
 
-from utils.streamlit_utils import State, render_select_camp_message
+from meta.utils.streamlit_utils import State, render_select_camp_message
 
 dotenv.load_dotenv()
 
