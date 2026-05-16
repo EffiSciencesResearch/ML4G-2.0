@@ -1,6 +1,8 @@
 # Streamlit Dashboard
 
-Internal Streamlit dashboard for ML4G bootcamp operations: camp creation and editing, career-docs duplication, session-feedback analysis, and one-on-one scheduling. Everything in this folder is used only by the web app; cross-tool helpers (e.g. Google APIs) live in `meta/shared/`.
+Internal Streamlit dashboard for ML4G bootcamp operations: camp creation and editing, career-docs duplication, session-feedback analysis, and one-on-one scheduling.
+
+The dashboard is composed of pages from across the `meta/` tree. App-frame pages (dashboard, create_camp, edit_camp, session_feedback) live in `meta/web/pages/`. Pages that belong to a specific tool live in that tool's folder as `web.py` (`meta/one_on_ones/web.py`, `meta/career_docs/web.py`). The page registry is in `meta/web/main.py`; domain models and service wrappers live in `meta/shared/`.
 
 ## Prerequisites
 
