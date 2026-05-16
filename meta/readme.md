@@ -5,7 +5,7 @@ This folder contains all the internal tools we use to run ML4G bootcamps. Each s
 ## Python tools
 
 - **[Slack Message Scheduler](./slack_reminders/README.md)** — schedule Slack messages from CSV/YAML, export channel members, manage scheduled drops.
-- **[Feedback Forms](./feedback_forms/README.md)** — generate the daily Google Forms feedback questionnaire for each day of a camp.
+- **[Feedback Form Creator](./feedback_form_creator/README.md)** — generate the daily Google Forms feedback questionnaire for each day of a camp.
 - **[Notebook Tools](./notebook_tools/README.md)** — workshop-authoring CLI: clean + badge + format `.ipynb` files, generate exercise notebooks from solutions, check links, fix typos.
 - **[Drive Changelog](./drive_changelog/README.md)** — currently unused, kept around.
 

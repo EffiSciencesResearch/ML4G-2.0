@@ -17,5 +17,5 @@ meta/camps
 meta/google_ops/config.yaml
 
 # Feedback forms authentication files
-meta/feedback_forms/creds.json
-meta/feedback_forms/token.pickle
+meta/feedback_form_creator/creds.json
+meta/feedback_form_creator/token.pickle

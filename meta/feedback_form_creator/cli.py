@@ -5,7 +5,7 @@ Main script to create daily feedback forms for a multi-day camp.
 
 import sys
 import os
-from meta.feedback_forms.forms_utils import (
+from meta.feedback_form_creator.forms_utils import (
     get_forms_service,
     get_drive_service,
     load_config,
@@ -20,7 +20,7 @@ from meta.feedback_forms.forms_utils import (
     create_image_item_with_url,
     move_file_to_folder,
 )
-from meta.feedback_forms.models import (
+from meta.feedback_form_creator.models import (
     CampConfig,
     ChoiceQuestionConfig,
     DayConfig,

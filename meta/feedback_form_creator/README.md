@@ -44,7 +44,7 @@ You need to create OAuth credentials to allow the script to access Google Forms 
    - Choose "Desktop app" as the application type
    - Give it a name (e.g., "ML4G Feedback Forms")
    - Download the JSON file
-5. Save the downloaded file as `meta/feedback_forms/creds.json`
+5. Save the downloaded file as `meta/feedback_form_creator/creds.json`
 
 ### 3. First-Time Authentication
 
@@ -58,7 +58,7 @@ When you run the script for the first time:
 
 ## Configuration
 
-Edit `meta/feedback_forms/config.yaml` to customize for your camp:
+Edit `meta/feedback_form_creator/config.yaml` to customize for your camp:
 
 ### Essential Settings to Change
 
@@ -109,7 +109,7 @@ To get autocompletion and validation for `config.yaml` in VSCode:
 
 To regenerate the schema after changing `models.py`, run:
 ```bash
-uv run python -m meta.feedback_forms.models
+uv run python -m meta.feedback_form_creator.models
 ```
 
 
@@ -117,7 +117,7 @@ uv run python -m meta.feedback_forms.models
 
 Run the script (from the repo root):
 ```bash
-uv run python -m meta.feedback_forms
+uv run python -m meta.feedback_form_creator
 ```
 
 The script will:
@@ -131,8 +131,8 @@ The script will:
 ## File Structure
 
 ```
-meta/feedback_forms/
-├── cli.py           # Main script (entry point for `python -m meta.feedback_forms`)
+meta/feedback_form_creator/
+├── cli.py           # Main script (entry point for `python -m meta.feedback_form_creator`)
 ├── forms_utils.py   # Helper functions
 ├── models.py        # Pydantic config models + schema generator
 ├── config.yaml      # Configuration file

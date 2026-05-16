@@ -16,6 +16,7 @@ PAGES = [
     ("Create Camp", META / "web" / "pages" / "create_camp.py"),
     ("One on One Scheduler", META / "one_on_ones" / "web.py"),
     ("Session Feedback", META / "web" / "pages" / "session_feedback.py"),
+    ("Feedback Form Creator", META / "feedback_form_creator" / "web.py"),
 ]
 
 

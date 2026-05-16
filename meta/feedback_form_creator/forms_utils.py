@@ -7,7 +7,7 @@ import os
 import pickle
 
 from meta.shared.google import load_service_account_credentials
-from meta.feedback_forms.models import (
+from meta.feedback_form_creator.models import (
     AnyQuestionConfig,
     CampConfig,
     ChoiceQuestionConfig,
@@ -59,7 +59,7 @@ def get_credentials():
                 print("\nTo use OAuth2:")
                 print("1. Go to https://console.cloud.google.com/apis/credentials")
                 print("2. Create OAuth 2.0 Client ID (Desktop app)")
-                print("3. Download JSON and save as creds.json in meta/feedback_forms/")
+                print("3. Download JSON and save as creds.json in meta/feedback_form_creator/")
                 raise
 
         # Save the credentials for the next run
