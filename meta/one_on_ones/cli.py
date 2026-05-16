@@ -26,9 +26,9 @@ def one_on_ones(
 
     Examples:
 
-        python meta/tools.py one-on-ones "Alice Bob Charlie" 2 --preferences "Alice,Charlie Bob,Alice"
+        uv run python -m meta.one_on_ones "Alice Bob Charlie" 2 --preferences "Alice,Charlie Bob,Alice"
 
-        python meta/tools.py one-on-ones "$(cat names.txt)" 5 --preferences "$(cat preferences.txt)"
+        uv run python -m meta.one_on_ones "$(cat names.txt)" 5 --preferences "$(cat preferences.txt)"
 
     Where names.txt contains the list of space or newline separated names,
     and preferences.txt contains the list of comma separated preferences.
@@ -41,6 +41,7 @@ def one_on_ones(
     else:
         name_list = names.split()
 
+    preferences_dict: dict[tuple[str, str], int] = {}
     if preferences is not None:
         if "\n" in preferences:
             preferences_list = [line.split(",") for line in preferences.splitlines()]
@@ -51,7 +52,7 @@ def one_on_ones(
 
     for i in range(tries):
         try:
-            all_pairings = make_pairing_graph(name_list, rounds, preferences_dict)
+            all_pairings = make_pairing_graph(name_list, rounds, preferences_dict, ta_group=set())
             print(f"Found a solution after {i+1} tries.", file=sys.stderr)
             break
         except KeyError:
