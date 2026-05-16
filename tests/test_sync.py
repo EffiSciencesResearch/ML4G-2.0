@@ -1,5 +1,5 @@
 from pathlib import Path
-from meta.tools import sync
+from meta.notebook_tools.cli import sync
 
 
 def test_sync(tmpdir):
