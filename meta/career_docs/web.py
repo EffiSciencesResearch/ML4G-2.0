@@ -41,7 +41,7 @@ participants = st.text_area(
 
 template_url = st.text_input(
     "Google Docs template URL",
-    value="https://docs.google.com/document/d/1juNxwskh_6tDz8oL5MwSrGoEkxg3lK8f1rJ0XOqpMGE/edit?tab=t.0",
+    value="https://docs.google.com/document/d/1P-5YD7A8VwmpiitQJC8gHxx84cFB6aGmoSTE4sHkjtc/edit?tab=t.2c93s55sniyc",
 )
 folder_url = st.text_input(
     "Folder to put the 1-1 docs",
