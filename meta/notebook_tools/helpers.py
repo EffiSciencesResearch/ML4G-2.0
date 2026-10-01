@@ -19,7 +19,22 @@ BADGE_TEMPLATE = """<a href="https://colab.research.google.com/github/EffiScienc
 RE_BADGE = re.compile(BADGE_TEMPLATE.format(repo_path=r'[^"]+'), re.MULTILINE)
 RE_BADGE = re.compile(r'<a href=\\"([^"]+)\\"[^>]*>.*?colab-badge\.svg.*?</a>', re.MULTILINE)
 
+RE_BLANK = re.compile(r"^\s*# Blank(?:\[(?P<labels>[^\]]*)\])?:(?P<text>.*)$")
+
 type Notebook = dict
+
+
+@dataclass
+class Blank:
+    """A "# Blank[labels]: text" directive, which blanks text in the line after it."""
+
+    labels: set[str] | None  # None means every exercise notebook
+    text: str
+    where: str = ""
+    applied: bool = False
+
+    def applies_to(self, label: str) -> bool:
+        return self.labels is None or "all" in self.labels or label in self.labels
 
 
 def gather_ipynbs(files: list[Path]) -> list[Path]:
@@ -183,6 +198,20 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     - basename_normal.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "...", "Visible again"
     - basename_hard.ipynb: "Always visible", "...", "Visible again"
     And the solution after this cell will contain everything but the "..." line.
+
+    "Blank: <text>" blanks part of the next line: in the exercise notebooks where that line
+    is visible, the first occurrence of <text> is replaced by "...". The solution keeps the line.
+    "Blank[hard]: <text>" or "Blank[hard, normal]: <text>" only blank it in those notebooks.
+
+    ```python
+    # Blank[normal]: run_with_cache
+    # Blank[hard]: gpt2_small.run_with_cache(tokens)
+    logits, cache = gpt2_small.run_with_cache(tokens)
+    ```
+
+    Will generate:
+    - basename_normal.ipynb: "logits, cache = gpt2_small....(tokens)"
+    - basename_hard.ipynb: "logits, cache = ..."
     """
 
     exercise_notebooks = {}
@@ -191,6 +220,42 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
         if line.strip().startswith("# Hide:"):
             return {label.strip().lower() for label in line.split(":")[1].split(",")}
         return set()
+
+    def parse_blank(line: str) -> Blank | None:
+        match = RE_BLANK.match(line)
+        if match is None:
+            return None
+        labels = match.group("labels")
+        if labels is not None:
+            labels = {label.strip().lower() for label in labels.split(",")}
+        return Blank(labels, match.group("text").strip())
+
+    def find_blanks(source: list[str], cell_idx: int) -> dict[int, list[Blank]]:
+        """Map the index of each blanked line to its blanks, checking they are well-formed."""
+        blanks = {}
+        pending = []
+        for line_idx, line in enumerate(source):
+            blank = parse_blank(line)
+            if blank is not None:
+                blank.where = f"cell {cell_idx}, line {line_idx + 1}: {line.strip()!r}"
+                if not blank.text:
+                    raise ValueError(f"Blank with nothing to blank, at {blank.where}")
+                pending.append(blank)
+                continue
+            if not pending:
+                continue
+            if not line.strip() or line.strip().startswith("#"):
+                raise ValueError(f"Blank must be followed by a line of code, at {pending[0].where}")
+            for blank in pending:
+                if blank.text not in line:
+                    raise ValueError(
+                        f"{blank.text!r} not found in {line.strip()!r}, at {blank.where}"
+                    )
+            blanks[line_idx] = pending
+            pending = []
+        if pending:
+            raise ValueError(f"Blank must be followed by a line of code, at {pending[0].where}")
+        return blanks
 
     def add_line_count_if_needed(lines_hidden_in_a_row: list[str]):
         nonlocal new_lines  # Unnecessary, but for clarity
@@ -224,20 +289,31 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
             "source": lines,
         }
 
-    # Find labels
+    # Find labels and blanks
     labels = set()
-    for cell in notebook["cells"]:
+    blanks = {}  # (cell index, line index) -> blanks of that line
+    for cell_idx, cell in enumerate(notebook["cells"]):
         if cell["cell_type"] == "code":
             for line in cell["source"]:
                 labels = labels.union(parse_hide(line))
+            for line_idx, line_blanks in find_blanks(cell["source"], cell_idx).items():
+                blanks[cell_idx, line_idx] = line_blanks
 
-    if not labels:
+    if not labels and not blanks:
         return {}
 
     labels.discard("none")
     labels.discard("solution")
     labels.discard("all")
     labels.add("normal")
+
+    for line_blanks in blanks.values():
+        for blank in line_blanks:
+            if blank.labels is not None and not blank.labels <= labels | {"all"}:
+                unknown = ", ".join(sorted(blank.labels - labels - {"all"}))
+                raise ValueError(
+                    f"Unknown notebook {unknown} at {blank.where}. Notebooks: {sorted(labels)}"
+                )
 
     # Generate notebooks
     for label in labels:
@@ -246,14 +322,17 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
 
         solution_lines = []
 
-        for cell in new_notebook["cells"]:
+        for cell_idx, cell in enumerate(new_notebook["cells"]):
             if cell["cell_type"] == "code":
                 hide = False
                 hide_in_solution = False
                 any_hidden = False
                 lines_hidden_in_a_row = []
                 new_lines = []
-                for line in cell["source"]:
+                for line_idx, line in enumerate(cell["source"]):
+                    if parse_blank(line) is not None:
+                        continue
+
                     hides_defined_here = parse_hide(line)
 
                     last_line = new_lines[-1] if new_lines else ""
@@ -288,7 +367,18 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
                     if not hide and not hides_defined_here:
                         add_line_count_if_needed(lines_hidden_in_a_row)
                         lines_hidden_in_a_row = []
-                        new_lines.append(line)
+                        blanked = line
+                        for blank in blanks.get((cell_idx, line_idx), []):
+                            if blank.applies_to(label):
+                                if blank.text not in blanked:
+                                    raise ValueError(
+                                        f"{blank.text!r} not found in {blanked.strip()!r} "
+                                        f"after the other blanks, at {blank.where}"
+                                    )
+                                blanked = blanked.replace(blank.text, "...", 1)
+                                blank.applied = True
+                                any_hidden = True
+                        new_lines.append(blanked)
                     else:
                         any_hidden = True
 
@@ -309,6 +399,13 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
 
         new_notebook["cells"] = new_cells
         exercise_notebooks[label] = new_notebook
+
+    for line_blanks in blanks.values():
+        for blank in line_blanks:
+            if not blank.applied:
+                raise ValueError(
+                    f"Blank is hidden in every notebook it applies to, at {blank.where}"
+                )
 
     return exercise_notebooks
 
