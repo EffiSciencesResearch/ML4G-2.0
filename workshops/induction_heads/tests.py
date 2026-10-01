@@ -1,13 +1,15 @@
+import einops
 import torch as t
 from torch import Tensor
 from typing import List, Tuple, Dict, Any, Union
 from jaxtyping import Float, Int, Bool
-from transformer_lens import utils, HookedTransformer, ActivationCache
+from transformer_lens import ActivationCache
+from transformer_lens.model_bridge import TransformerBridge
 
 
 def logit_attribution(
     tokens: Int[Tensor, "batch seq"],
-    model: HookedTransformer,
+    model: TransformerBridge,
     cache: ActivationCache,
     token_position: int,
 ) -> Float[Tensor, "layers heads"]:
@@ -16,7 +18,7 @@ def logit_attribution(
 
     Args:
         tokens (Int[Tensor, "batch seq"]): The input token IDs tensor with shape (batch_size, sequence_length).
-        model (HookedTransformer): The HookedTransformer model instance.
+        model (TransformerBridge): The TransformerLens model.
         cache (ActivationCache): The activation cache containing the intermediate results.
         token_position (int): The position of the token in the input sequence for which to compute the attribution.
 
@@ -33,14 +35,19 @@ def logit_attribution(
         - The returned attention pattern has shape (num_layers, num_heads), representing the attribution scores
           for each layer and attention head.
     """
-    # Retrieve the attention results from the activation cache for each transformer block
-    results = [cache[f"blocks.{i}.attn.hook_result"] for i in range(len(model.blocks))]
+    # Retrieve the z of each head from the activation cache for each transformer block
+    zs = [cache["z", layer] for layer in range(model.cfg.n_layers)]
 
-    # Stack the attention results along the layer dimension
-    results = t.stack(results, dim=1)
+    # Stack them along the layer dimension
+    zs = t.stack(zs, dim=1)
 
-    # Select the attention results corresponding to the specified token position
-    results = results[token_position, :, :, :]
+    # Select the z corresponding to the specified token position
+    zs = zs[token_position]
+
+    # Multiply by W_O to get what each head writes to the residual stream
+    results = einops.einsum(
+        zs, model.W_O, "layer head d_head, layer head d_head d_model -> layer head d_model"
+    )
 
     # Pass the selected attention results through the model's unembed function to obtain the logits
     logits = model.unembed(results)
