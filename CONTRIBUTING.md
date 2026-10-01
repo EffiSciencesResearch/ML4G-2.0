@@ -129,3 +129,20 @@ for i in range(10):
 print("Success 🎉")
 ```
 </details>
+
+#### Blanking part of a line
+`# Hide:` works on whole lines. To hide only part of a line, put a `# Blank: <text>` comment on its own line, just before it. In the exercise notebooks, the first occurrence of `<text>` in the next line is replaced by `...`. The solution notebook and the solution cells keep the full line.
+
+```python
+# Blank[normal]: run_with_cache
+# Blank[hard]: model.run_with_cache(tokens)
+logits, cache = model.run_with_cache(tokens)
+```
+This gives `logits, cache = model....(tokens)` in the normal notebook and `logits, cache = ...` in the hard one.
+
+- `# Blank: <text>` blanks the text in every exercise notebook. `# Blank[hard]: <text>` or `# Blank[hard, normal]: <text>` only in those notebooks.
+- A blank only applies where the line is visible. Combine it with `# Hide:` to show a line in full in one notebook and blank it in another.
+- Several `# Blank:` lines can be stacked before the same line. They are applied in order.
+- Prefer blanks that keep the line valid Python, like `t.stack(...)` rather than `t.stack...`, so the notebooks can still be formatted.
+- Put `# Blank:` lines above the statement, not inside its brackets. black puts every argument on its own line when a bracket contains a comment, so the blanked text would no longer be on the next line. If the statement is too long for one line anyway, write it the way black splits it, one argument per line, and put a `# Blank:` before each argument line to blank.
+- `sync` fails if `<text>` is not in the next line, if a notebook name is unknown, or if the blank is hidden in every notebook it applies to. This way, blanks cannot silently go out of sync with the code.
