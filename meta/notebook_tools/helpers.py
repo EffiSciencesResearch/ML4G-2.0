@@ -20,6 +20,8 @@ RE_BADGE = re.compile(BADGE_TEMPLATE.format(repo_path=r'[^"]+'), re.MULTILINE)
 RE_BADGE = re.compile(r'<a href=\\"([^"]+)\\"[^>]*>.*?colab-badge\.svg.*?</a>', re.MULTILINE)
 
 RE_BLANK = re.compile(r"^\s*# Blank(?:\[(?P<labels>[^\]]*)\])?:(?P<text>.*)$")
+# A name rather than "...", so an unfilled blank raises a NameError instead of running as Ellipsis.
+BLANK_PLACEHOLDER = "________"
 
 type Notebook = dict
 
@@ -200,7 +202,8 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     And the solution after this cell will contain everything but the "..." line.
 
     "Blank: <text>" blanks part of the next line: in the exercise notebooks where that line
-    is visible, the first occurrence of <text> is replaced by "...". The solution keeps the line.
+    is visible, <text> is replaced by "________". It must occur exactly once in the line.
+    The solution keeps the line.
     "Blank[hard]: <text>" or "Blank[hard, normal]: <text>" only blank it in those notebooks.
 
     ```python
@@ -210,8 +213,8 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     ```
 
     Will generate:
-    - basename_normal.ipynb: "logits, cache = gpt2_small....(tokens)"
-    - basename_hard.ipynb: "logits, cache = ..."
+    - basename_normal.ipynb: "logits, cache = gpt2_small.________(tokens)"
+    - basename_hard.ipynb: "logits, cache = ________"
     """
 
     exercise_notebooks = {}
@@ -237,7 +240,7 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
         for line_idx, line in enumerate(source):
             blank = parse_blank(line)
             if blank is not None:
-                blank.where = f"cell {cell_idx}, line {line_idx + 1}: {line.strip()!r}"
+                blank.where = f"cell {cell_idx + 1}, line {line_idx + 1}: {line.strip()!r}"
                 if not blank.text:
                     raise ValueError(f"Blank with nothing to blank, at {blank.where}")
                 pending.append(blank)
@@ -247,9 +250,11 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
             if not line.strip() or line.strip().startswith("#"):
                 raise ValueError(f"Blank must be followed by a line of code, at {pending[0].where}")
             for blank in pending:
-                if blank.text not in line:
+                occurrences = line.count(blank.text)
+                if occurrences != 1:
                     raise ValueError(
-                        f"{blank.text!r} not found in {line.strip()!r}, at {blank.where}"
+                        f"{blank.text!r} found {occurrences} times in {line.strip()!r}, "
+                        f"instead of once, at {blank.where}"
                     )
             blanks[line_idx] = pending
             pending = []
@@ -375,7 +380,7 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
                                         f"{blank.text!r} not found in {blanked.strip()!r} "
                                         f"after the other blanks, at {blank.where}"
                                     )
-                                blanked = blanked.replace(blank.text, "...", 1)
+                                blanked = blanked.replace(blank.text, BLANK_PLACEHOLDER, 1)
                                 blank.applied = True
                                 any_hidden = True
                         new_lines.append(blanked)

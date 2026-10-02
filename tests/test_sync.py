@@ -51,8 +51,8 @@ def test_blank_in_every_notebook():
         y = f(x) + 1
         """
     )
-    assert exercise_code(notebook, "normal") == "x = 1\ny = ... + 1\n"
-    assert exercise_code(notebook, "hard") == "...  # TODO: ~2 words\ny = ... + 1\n"
+    assert exercise_code(notebook, "normal") == "x = 1\ny = ________ + 1\n"
+    assert exercise_code(notebook, "hard") == "...  # TODO: ~2 words\ny = ________ + 1\n"
     assert "y = f(x) + 1\n" in solution_code(notebook, "normal")
     assert "Blank" not in solution_code(notebook, "normal")
 
@@ -65,7 +65,7 @@ def test_blank_only_generates_normal_notebook():
         """
     )
     assert set(generate_exercise_notebooks(notebook)) == {"normal"}
-    assert exercise_code(notebook, "normal") == "y = ...\n"
+    assert exercise_code(notebook, "normal") == "y = ________\n"
     assert "y = f(x)\n" in solution_code(notebook, "normal")
 
 
@@ -79,8 +79,8 @@ def test_blank_per_notebook():
         x = 1
         """
     )
-    assert exercise_code(notebook, "normal") == "logits, cache = model....(tokens)\nx = 1\n"
-    assert exercise_code(notebook, "hard") == "logits, cache = ...\n...  # TODO: ~2 words\n"
+    assert exercise_code(notebook, "normal") == "logits, cache = model.________(tokens)\nx = 1\n"
+    assert exercise_code(notebook, "hard") == "logits, cache = ________\n...  # TODO: ~2 words\n"
 
 
 def test_blank_in_hard_only_shows_line_in_normal():
@@ -93,7 +93,7 @@ def test_blank_in_hard_only_shows_line_in_normal():
         """
     )
     assert exercise_code(notebook, "normal") == "y = f(x)\nx = 1\n"
-    assert exercise_code(notebook, "hard") == "y = ...\n...  # TODO: ~2 words\n"
+    assert exercise_code(notebook, "hard") == "y = ________\n...  # TODO: ~2 words\n"
 
 
 def test_blank_of_hidden_line_is_skipped():
@@ -105,14 +105,27 @@ def test_blank_of_hidden_line_is_skipped():
         # Hide: none
         """
     )
-    assert exercise_code(notebook, "normal") == "y = ...\n"
+    assert exercise_code(notebook, "normal") == "y = ________\n"
     assert exercise_code(notebook, "hard") == "...  # TODO: ~3 words\n"
+
+
+def test_blank_whole_line_before_hidden_lines():
+    notebook = make_notebook(
+        """
+        # Blank: y = f(x)
+        y = f(x)
+        # Hide: all
+        z = g(y)
+        """
+    )
+    assert exercise_code(notebook, "normal") == "________\n...  # TODO: ~3 words\n"
 
 
 @pytest.mark.parametrize(
     "source, error",
     [
-        ("# Blank: g(x)\ny = f(x)\n", "not found"),
+        ("# Blank: g(x)\ny = f(x)\n", "found 0 times"),
+        ("# Blank: x\nmax_x = x + 1\n", "found 3 times"),
         ("# Blank: f(x)\n", "followed by a line of code"),
         ("# Blank: f(x)\n\ny = f(x)\n", "followed by a line of code"),
         ("# Blank: f(x)\n# Hide: hard\ny = f(x)\n", "followed by a line of code"),

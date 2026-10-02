@@ -106,7 +106,10 @@ def badge(files: list[Path]):
 def sync(files: list[Path]):
     for file in gather_ipynbs(files):
         notebook = load_notebook(file)
-        new_notebooks = generate_exercise_notebooks(notebook)
+        try:
+            new_notebooks = generate_exercise_notebooks(notebook)
+        except ValueError as e:
+            raise ValueError(f"{file}: {e}") from e
 
         for label, new_notebook in new_notebooks.items():
             out_path = file.with_stem(file.stem + f"_{label}")
