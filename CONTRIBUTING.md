@@ -140,9 +140,9 @@ logits, cache = model.run_with_cache(tokens)
 ```
 This gives `logits, cache = model.________(tokens)` in the normal notebook and `logits, cache = ________` in the hard one. A blank left unfilled raises a `NameError` on its line.
 
-- `# Blank: <text>` blanks the text in every exercise notebook. `# Blank[hard]: <text>` or `# Blank[hard, normal]: <text>` only in those notebooks.
+- `# Blank: <text>` blanks the text in every exercise notebook. `# Blank[hard]: <text>` or `# Blank[hard, normal]: <text>` only in those notebooks, and creates them like `# Hide: hard` does.
 - A blank only applies where the line is visible. Combine it with `# Hide:` to show a line in full in one notebook and blank it in another.
 - Several `# Blank:` lines can be stacked before the same line. They are applied in order.
 - Prefer blanks that keep the line valid Python, like `stack(xs)` rather than `stack(xs`, so the notebooks can still be formatted.
 - Put `# Blank:` lines above the statement, not inside its brackets. black puts every argument on its own line when a bracket contains a comment, so the blanked text would no longer be on the next line. If the statement is too long for one line anyway, write it the way black splits it, one argument per line, and put a `# Blank:` before each argument line to blank.
-- `sync` fails if `<text>` is not exactly once in the next line, if a notebook name is unknown, or if the blank is hidden in every notebook it applies to. This way, blanks cannot silently go out of sync with the code.
+- `sync` fails if `<text>` is not exactly once in the next line, or if the blank is hidden in every notebook it applies to. This way, blanks cannot silently go out of sync with the code.

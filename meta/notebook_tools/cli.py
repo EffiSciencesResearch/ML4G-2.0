@@ -9,6 +9,7 @@ import typer
 
 from meta.notebook_tools.helpers import (
     ROOT,
+    DirectiveError,
     add_badge,
     check_link,
     clean_notebook,
@@ -108,8 +109,9 @@ def sync(files: list[Path]):
         notebook = load_notebook(file)
         try:
             new_notebooks = generate_exercise_notebooks(notebook)
-        except ValueError as e:
-            raise ValueError(f"{file}: {e}") from e
+        except DirectiveError as e:
+            typer.echo(f"{file}: {e}", err=True)
+            raise typer.Exit(1)
 
         for label, new_notebook in new_notebooks.items():
             out_path = file.with_stem(file.stem + f"_{label}")

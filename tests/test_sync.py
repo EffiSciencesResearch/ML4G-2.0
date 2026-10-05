@@ -2,9 +2,10 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
+import typer
 
 from meta.notebook_tools.cli import sync
-from meta.notebook_tools.helpers import generate_exercise_notebooks
+from meta.notebook_tools.helpers import generate_exercise_notebooks, notebook_to_str
 
 
 def test_sync(tmpdir):
@@ -109,6 +110,28 @@ def test_blank_of_hidden_line_is_skipped():
     assert exercise_code(notebook, "hard") == "...  # TODO: ~3 words\n"
 
 
+def test_blank_label_creates_notebook():
+    notebook = make_notebook(
+        """
+        # Blank[hard]: f(x)
+        y = f(x)
+        """
+    )
+    assert set(generate_exercise_notebooks(notebook)) == {"normal", "hard"}
+    assert exercise_code(notebook, "normal") == "y = f(x)\n"
+    assert exercise_code(notebook, "hard") == "y = ________\n"
+
+
+def test_one_hidden_word_is_singular():
+    notebook = make_notebook(
+        """
+        # Hide: all
+        x
+        """
+    )
+    assert exercise_code(notebook, "normal") == "...  # TODO: ~1 word\n"
+
+
 def test_blank_whole_line_before_hidden_lines():
     notebook = make_notebook(
         """
@@ -130,7 +153,6 @@ def test_blank_whole_line_before_hidden_lines():
         ("# Blank: f(x)\n\ny = f(x)\n", "followed by a line of code"),
         ("# Blank: f(x)\n# Hide: hard\ny = f(x)\n", "followed by a line of code"),
         ("# Blank:\ny = f(x)\n", "nothing to blank"),
-        ("# Blank[hrad]: f(x)\ny = f(x)\n# Hide: hard\nx = 1\n", "Unknown notebook hrad"),
         ("# Hide: hard\n# Blank[hard]: f(x)\ny = f(x)\n", "hidden in every notebook"),
         ("# Blank: f(x)\n# Blank: f(x)\ny = f(x)\n", "after the other blanks"),
     ],
@@ -138,3 +160,12 @@ def test_blank_whole_line_before_hidden_lines():
 def test_blank_errors(source, error):
     with pytest.raises(ValueError, match=error):
         generate_exercise_notebooks(make_notebook(source))
+
+
+def test_sync_reports_directive_error_with_file(tmp_path, capsys):
+    path = tmp_path / "workshop.ipynb"
+    notebook = make_notebook("# Blank: g(x)\ny = f(x)\n")
+    path.write_text(notebook_to_str(notebook), encoding="utf-8")
+    with pytest.raises(typer.Exit):
+        sync([path])
+    assert f"{path}: 'g(x)' found 0 times" in capsys.readouterr().err

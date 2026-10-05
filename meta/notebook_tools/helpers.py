@@ -26,6 +26,10 @@ BLANK_PLACEHOLDER = "________"
 type Notebook = dict
 
 
+class DirectiveError(ValueError):
+    """A "# Blank:" directive that does not match the code around it."""
+
+
 @dataclass
 class Blank:
     """A "# Blank[labels]: text" directive, which blanks text in the line after it."""
@@ -204,7 +208,8 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     "Blank: <text>" blanks part of the next line: in the exercise notebooks where that line
     is visible, <text> is replaced by "________". It must occur exactly once in the line.
     The solution keeps the line.
-    "Blank[hard]: <text>" or "Blank[hard, normal]: <text>" only blank it in those notebooks.
+    "Blank[hard]: <text>" or "Blank[hard, normal]: <text>" only blank it in those notebooks,
+    and generate them like "Hide: hard" does.
 
     ```python
     # Blank[normal]: run_with_cache
@@ -242,24 +247,26 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
             if blank is not None:
                 blank.where = f"cell {cell_idx + 1}, line {line_idx + 1}: {line.strip()!r}"
                 if not blank.text:
-                    raise ValueError(f"Blank with nothing to blank, at {blank.where}")
+                    raise DirectiveError(f"Blank with nothing to blank, at {blank.where}")
                 pending.append(blank)
                 continue
             if not pending:
                 continue
             if not line.strip() or line.strip().startswith("#"):
-                raise ValueError(f"Blank must be followed by a line of code, at {pending[0].where}")
+                raise DirectiveError(
+                    f"Blank must be followed by a line of code, at {pending[0].where}"
+                )
             for blank in pending:
                 occurrences = line.count(blank.text)
                 if occurrences != 1:
-                    raise ValueError(
+                    raise DirectiveError(
                         f"{blank.text!r} found {occurrences} times in {line.strip()!r}, "
                         f"instead of once, at {blank.where}"
                     )
             blanks[line_idx] = pending
             pending = []
         if pending:
-            raise ValueError(f"Blank must be followed by a line of code, at {pending[0].where}")
+            raise DirectiveError(f"Blank must be followed by a line of code, at {pending[0].where}")
         return blanks
 
     def add_line_count_if_needed(lines_hidden_in_a_row: list[str]):
@@ -269,7 +276,7 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
             nb_words = sum(
                 len(re.findall(r"[a-zA-Z0-9_]+", line)) for line in lines_hidden_in_a_row
             )
-            unit = "word" if lines_hidden_in_a_row == 1 else "words"
+            unit = "word" if nb_words == 1 else "words"
             new_lines[-1] += f"  # TODO: ~{nb_words} {unit}\n"
 
     def solution_lines_to_cell(solution_lines: list[str]) -> dict | None:
@@ -303,6 +310,8 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
                 labels = labels.union(parse_hide(line))
             for line_idx, line_blanks in find_blanks(cell["source"], cell_idx).items():
                 blanks[cell_idx, line_idx] = line_blanks
+                for blank in line_blanks:
+                    labels |= blank.labels or set()
 
     if not labels and not blanks:
         return {}
@@ -311,14 +320,6 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     labels.discard("solution")
     labels.discard("all")
     labels.add("normal")
-
-    for line_blanks in blanks.values():
-        for blank in line_blanks:
-            if blank.labels is not None and not blank.labels <= labels | {"all"}:
-                unknown = ", ".join(sorted(blank.labels - labels - {"all"}))
-                raise ValueError(
-                    f"Unknown notebook {unknown} at {blank.where}. Notebooks: {sorted(labels)}"
-                )
 
     # Generate notebooks
     for label in labels:
@@ -376,7 +377,7 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
                         for blank in blanks.get((cell_idx, line_idx), []):
                             if blank.applies_to(label):
                                 if blank.text not in blanked:
-                                    raise ValueError(
+                                    raise DirectiveError(
                                         f"{blank.text!r} not found in {blanked.strip()!r} "
                                         f"after the other blanks, at {blank.where}"
                                     )
@@ -408,7 +409,7 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     for line_blanks in blanks.values():
         for blank in line_blanks:
             if not blank.applied:
-                raise ValueError(
+                raise DirectiveError(
                     f"Blank is hidden in every notebook it applies to, at {blank.where}"
                 )
 
