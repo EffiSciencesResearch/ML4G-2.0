@@ -154,6 +154,96 @@ def add_badge(file: Path, notebook: Notebook) -> Notebook:
     return notebook
 
 
+def parse_hide(line: str) -> set[str]:
+    """The labels of a "# Hide: <label1>, <label2>" line, or an empty set for any other line."""
+    if line.strip().startswith("# Hide:"):
+        return {label.strip().lower() for label in line.split(":")[1].split(",")}
+    return set()
+
+
+@dataclass(frozen=True)
+class Line:
+    """A line of a solution cell, with the "# Hide:" labels that apply to it."""
+
+    text: str
+    hide: frozenset[str]  # labels of the last "# Hide:" line up to this one, included
+    is_hide: bool  # whether this is a "# Hide:" line
+
+    def hidden_in(self, label: str) -> bool:
+        return "all" in self.hide or label in self.hide
+
+    def in_solution(self) -> bool:
+        return not self.is_hide and "solution" not in self.hide
+
+    def is_code(self) -> bool:
+        return bool(self.text.strip()) and not self.text.strip().startswith("#")
+
+
+def parse_cell(source: list[str]) -> list[Line]:
+    lines = []
+    hide = frozenset()
+    for text in source:
+        labels = parse_hide(text)
+        if labels:
+            hide = frozenset(labels)
+        lines.append(Line(text, hide, is_hide=bool(labels)))
+    return lines
+
+
+def hidden_words_hint(hidden_lines: list[str]) -> str:
+    nb_words = sum(len(re.findall(r"[a-zA-Z0-9_]+", line)) for line in hidden_lines)
+    unit = "word" if hidden_lines == 1 else "words"
+    return f"  # TODO: ~{nb_words} {unit}\n"
+
+
+def render_exercise(lines: list[Line], label: str) -> list[str]:
+    """The source of the exercise cell: each run of hidden lines becomes "..." and a size hint."""
+    rendered = []
+    hidden_run = []  # code lines hidden since the last visible line
+    was_hidden = False
+    for line in lines:
+        hidden = line.hidden_in(label)
+        # A run of hidden lines starts, and the previous line is not already a "..."
+        if hidden and not was_hidden and not (rendered and rendered[-1].strip().startswith("...")):
+            rendered.append(line.text.partition("#")[0] + "...")
+        if hidden and line.is_code() and line.in_solution():
+            hidden_run.append(line.text)
+        if not hidden and not line.is_hide:
+            if hidden_run:
+                rendered[-1] += hidden_words_hint(hidden_run)
+                hidden_run = []
+            rendered.append(line.text)
+        was_hidden = hidden
+    if hidden_run:
+        rendered[-1] += hidden_words_hint(hidden_run)
+    return rendered
+
+
+def has_hidden(lines: list[Line], label: str) -> bool:
+    """Whether the cell gets a solution cell in the notebook of the label."""
+    return any(line.is_hide or line.hidden_in(label) for line in lines)
+
+
+def solution_cell(solution_lines: list[str]) -> dict:
+    lines = [
+        "<details>\n",
+        "<summary>Show solution</summary>\n",
+        "\n",
+        "```python\n",
+        *solution_lines,
+        "\n",
+        "```\n",
+        "\n",
+        "</details>\n",
+        "\n",
+    ]
+    return {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": lines,
+    }
+
+
 def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     """Generate the exercises notebook from the solutions notebook.
 
@@ -185,127 +275,29 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     And the solution after this cell will contain everything but the "..." line.
     """
 
-    exercise_notebooks = {}
-
-    def parse_hide(line: str) -> set[str]:
-        if line.strip().startswith("# Hide:"):
-            return {label.strip().lower() for label in line.split(":")[1].split(",")}
-        return set()
-
-    def add_line_count_if_needed(lines_hidden_in_a_row: list[str]):
-        nonlocal new_lines  # Unnecessary, but for clarity
-        if lines_hidden_in_a_row:
-            # We compute the number of words hidden
-            nb_words = sum(
-                len(re.findall(r"[a-zA-Z0-9_]+", line)) for line in lines_hidden_in_a_row
-            )
-            unit = "word" if lines_hidden_in_a_row == 1 else "words"
-            new_lines[-1] += f"  # TODO: ~{nb_words} {unit}\n"
-
-    def solution_lines_to_cell(solution_lines: list[str]) -> dict | None:
-        if not solution_lines:
-            return None
-
-        lines = [
-            "<details>\n",
-            "<summary>Show solution</summary>\n",
-            "\n",
-            "```python\n",
-            *solution_lines,
-            "\n",
-            "```\n",
-            "\n",
-            "</details>\n",
-            "\n",
-        ]
-        return {
-            "cell_type": "markdown",
-            "metadata": {},
-            "source": lines,
-        }
-
-    # Find labels
-    labels = set()
-    for cell in notebook["cells"]:
-        if cell["cell_type"] == "code":
-            for line in cell["source"]:
-                labels = labels.union(parse_hide(line))
-
+    cells = [
+        parse_cell(cell["source"]) if cell["cell_type"] == "code" else None
+        for cell in notebook["cells"]
+    ]
+    labels = {label for lines in cells if lines for line in lines for label in line.hide}
     if not labels:
         return {}
 
-    labels.discard("none")
-    labels.discard("solution")
-    labels.discard("all")
+    labels -= {"none", "solution", "all"}
     labels.add("normal")
 
-    # Generate notebooks
+    exercise_notebooks = {}
     for label in labels:
         new_notebook = deepcopy(notebook)
         new_cells = []
-
-        solution_lines = []
-
-        for cell in new_notebook["cells"]:
-            if cell["cell_type"] == "code":
-                hide = False
-                hide_in_solution = False
-                any_hidden = False
-                lines_hidden_in_a_row = []
-                new_lines = []
-                for line in cell["source"]:
-                    hides_defined_here = parse_hide(line)
-
-                    last_line = new_lines[-1] if new_lines else ""
-                    last_hide = hide
-
-                    if "solution" in hides_defined_here:
-                        hide_in_solution = True
-                    elif hides_defined_here:
-                        hide_in_solution = False
-
-                    if "all" in hides_defined_here:
-                        hide = True
-                    elif label in hides_defined_here:
-                        hide = True
-                    elif hides_defined_here:
-                        hide = False
-
-                    # We started hidding stuff, and previous line did not start with "..."
-                    if hide and not last_hide and not last_line.strip().startswith("..."):
-                        space = line.partition("#")[0]
-                        new_lines.append(space + "...")  # We add the number of lines hidden
-
-                    # Increment the counter of hiden lines, if non-empty/non-comment line and hidden
-                    if (
-                        hide
-                        and line.strip()
-                        and not hide_in_solution
-                        and not line.strip().startswith("#")
-                    ):
-                        lines_hidden_in_a_row.append(line)
-
-                    if not hide and not hides_defined_here:
-                        add_line_count_if_needed(lines_hidden_in_a_row)
-                        lines_hidden_in_a_row = []
-                        new_lines.append(line)
-                    else:
-                        any_hidden = True
-
-                    if not hide_in_solution and not hides_defined_here:
-                        solution_lines.append(line)
-
-                # If we end by hidding, lines_hidden_in_a_row is still > 0
-                add_line_count_if_needed(lines_hidden_in_a_row)
-
-                cell["source"] = new_lines
-                if not any_hidden:
-                    solution_lines = []
+        for cell, lines in zip(new_notebook["cells"], cells):
             new_cells.append(cell)
-
-            if solution_lines:
-                new_cells.append(solution_lines_to_cell(solution_lines))
-                solution_lines = []
+            if lines is None:
+                continue
+            cell["source"] = render_exercise(lines, label)
+            solution_lines = [line.text for line in lines if line.in_solution()]
+            if solution_lines and has_hidden(lines, label):
+                new_cells.append(solution_cell(solution_lines))
 
         new_notebook["cells"] = new_cells
         exercise_notebooks[label] = new_notebook
