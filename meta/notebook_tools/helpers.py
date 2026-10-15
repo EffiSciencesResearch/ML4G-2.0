@@ -19,7 +19,15 @@ BADGE_TEMPLATE = """<a href="https://colab.research.google.com/github/EffiScienc
 RE_BADGE = re.compile(BADGE_TEMPLATE.format(repo_path=r'[^"]+'), re.MULTILINE)
 RE_BADGE = re.compile(r'<a href=\\"([^"]+)\\"[^>]*>.*?colab-badge\.svg.*?</a>', re.MULTILINE)
 
+RE_BLANK = re.compile(r"^\s*# Blank(?:\[(?P<labels>[^\]]*)\])?:(?P<text>.*)$")
+# A name rather than "...", so an unfilled blank raises a NameError instead of running as Ellipsis.
+BLANK_PLACEHOLDER = "________"
+
 type Notebook = dict
+
+
+class DirectiveError(ValueError):
+    """A "# Blank:" directive that does not match the code around it."""
 
 
 def gather_ipynbs(files: list[Path]) -> list[Path]:
@@ -162,12 +170,38 @@ def parse_hide(line: str) -> set[str]:
 
 
 @dataclass(frozen=True)
+class Blank:
+    """A "# Blank[labels]: text" directive, which blanks text in the line after it."""
+
+    labels: frozenset[str] | None  # None means every exercise notebook
+    text: str
+    where: str  # position of the directive, for error messages
+
+    def applies_to(self, label: str) -> bool:
+        return self.labels is None or "all" in self.labels or label in self.labels
+
+
+def parse_blank(line: str, where: str) -> Blank | None:
+    match = RE_BLANK.match(line)
+    if match is None:
+        return None
+    labels = match.group("labels")
+    if labels is not None:
+        labels = frozenset(label.strip().lower() for label in labels.split(","))
+    blank = Blank(labels, match.group("text").strip(), where)
+    if not blank.text:
+        raise DirectiveError(f"Blank with nothing to blank, at {where}")
+    return blank
+
+
+@dataclass(frozen=True)
 class Line:
-    """A line of a solution cell, with the "# Hide:" labels that apply to it."""
+    """A line of a solution cell, with the "# Hide:" labels and "# Blank:"s that apply to it."""
 
     text: str
     hide: frozenset[str]  # labels of the last "# Hide:" line up to this one, included
     is_hide: bool  # whether this is a "# Hide:" line
+    blanks: tuple[Blank, ...] = ()  # the "# Blank:" lines right above this one
 
     def hidden_in(self, label: str) -> bool:
         return "all" in self.hide or label in self.hide
@@ -179,15 +213,53 @@ class Line:
         return bool(self.text.strip()) and not self.text.strip().startswith("#")
 
 
-def parse_cell(source: list[str]) -> list[Line]:
+def parse_cell(source: list[str], cell_idx: int) -> list[Line]:
+    """Parse the lines of a code cell. "# Blank:" lines are attached to the line after them."""
     lines = []
     hide = frozenset()
-    for text in source:
+    blanks = []
+    for line_idx, text in enumerate(source):
+        blank = parse_blank(
+            text, where=f"cell {cell_idx + 1}, line {line_idx + 1}: {text.strip()!r}"
+        )
+        if blank is not None:
+            blanks.append(blank)
+            continue
         labels = parse_hide(text)
         if labels:
             hide = frozenset(labels)
-        lines.append(Line(text, hide, is_hide=bool(labels)))
+        lines.append(Line(text, hide, is_hide=bool(labels), blanks=tuple(blanks)))
+        check_blanks(lines[-1])
+        blanks = []
+    if blanks:
+        raise DirectiveError(f"Blank must be followed by a line of code, at {blanks[0].where}")
     return lines
+
+
+def check_blanks(line: Line):
+    """Raise a DirectiveError unless each blank of the line occurs exactly once in it."""
+    if line.blanks and not line.is_code():
+        raise DirectiveError(f"Blank must be followed by a line of code, at {line.blanks[0].where}")
+    for blank in line.blanks:
+        occurrences = line.text.count(blank.text)
+        if occurrences != 1:
+            raise DirectiveError(
+                f"{blank.text!r} found {occurrences} times in {line.text.strip()!r}, "
+                f"instead of once, at {blank.where}"
+            )
+
+
+def apply_blanks(line: Line, label: str) -> str:
+    text = line.text
+    for blank in line.blanks:
+        if blank.applies_to(label):
+            if blank.text not in text:
+                raise DirectiveError(
+                    f"{blank.text!r} not found in {text.strip()!r} "
+                    f"after the other blanks, at {blank.where}"
+                )
+            text = text.replace(blank.text, BLANK_PLACEHOLDER, 1)
+    return text
 
 
 def hidden_words_hint(hidden_lines: list[str]) -> str:
@@ -212,7 +284,7 @@ def render_exercise(lines: list[Line], label: str) -> list[str]:
             if hidden_run:
                 rendered[-1] += hidden_words_hint(hidden_run)
                 hidden_run = []
-            rendered.append(line.text)
+            rendered.append(apply_blanks(line, label))
         was_hidden = hidden
     if hidden_run:
         rendered[-1] += hidden_words_hint(hidden_run)
@@ -221,7 +293,12 @@ def render_exercise(lines: list[Line], label: str) -> list[str]:
 
 def has_hidden(lines: list[Line], label: str) -> bool:
     """Whether the cell gets a solution cell in the notebook of the label."""
-    return any(line.is_hide or line.hidden_in(label) for line in lines)
+    return any(
+        line.is_hide
+        or line.hidden_in(label)
+        or any(blank.applies_to(label) for blank in line.blanks)
+        for line in lines
+    )
 
 
 def solution_cell(solution_lines: list[str]) -> dict:
@@ -273,18 +350,43 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
     - basename_normal.ipynb: "Always visible", "Hidden in the hard notebook", "And this one too", "...", "Visible again"
     - basename_hard.ipynb: "Always visible", "...", "Visible again"
     And the solution after this cell will contain everything but the "..." line.
+
+    "Blank: <text>" blanks part of the next line: in the exercise notebooks where that line
+    is visible, <text> is replaced by "________". It must occur exactly once in the line.
+    The solution keeps the line.
+    "Blank[hard]: <text>" or "Blank[hard, normal]: <text>" only blank it in those notebooks,
+    and generate them like "Hide: hard" does.
+
+    ```python
+    # Blank[normal]: run_with_cache
+    # Blank[hard]: gpt2_small.run_with_cache(tokens)
+    logits, cache = gpt2_small.run_with_cache(tokens)
+    ```
+
+    Will generate:
+    - basename_normal.ipynb: "logits, cache = gpt2_small.________(tokens)"
+    - basename_hard.ipynb: "logits, cache = ________"
     """
 
     cells = [
-        parse_cell(cell["source"]) if cell["cell_type"] == "code" else None
-        for cell in notebook["cells"]
+        parse_cell(cell["source"], cell_idx) if cell["cell_type"] == "code" else None
+        for cell_idx, cell in enumerate(notebook["cells"])
     ]
-    labels = {label for lines in cells if lines for line in lines for label in line.hide}
-    if not labels:
+    all_lines = [line for lines in cells if lines for line in lines]
+    blanks = [(line, blank) for line in all_lines for blank in line.blanks]
+    labels = {label for line in all_lines for label in line.hide}
+    labels |= {label for _, blank in blanks for label in blank.labels or ()}
+    if not labels and not blanks:
         return {}
 
     labels -= {"none", "solution", "all"}
     labels.add("normal")
+
+    for line, blank in blanks:
+        if not any(blank.applies_to(label) and not line.hidden_in(label) for label in labels):
+            raise DirectiveError(
+                f"Blank is hidden in every notebook it applies to, at {blank.where}"
+            )
 
     exercise_notebooks = {}
     for label in labels:
