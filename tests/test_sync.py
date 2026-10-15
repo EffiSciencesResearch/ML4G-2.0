@@ -5,7 +5,7 @@ import pytest
 import typer
 
 from meta.notebook_tools.cli import sync
-from meta.notebook_tools.helpers import generate_exercise_notebooks, notebook_to_str
+from meta.notebook_tools.helpers import clean_notebook, generate_exercise_notebooks, notebook_to_str
 
 
 def test_sync(tmpdir):
@@ -169,3 +169,8 @@ def test_sync_reports_directive_error_with_file(tmp_path, capsys):
     with pytest.raises(typer.Exit):
         sync([path])
     assert f"{path}: 'g(x)' found 0 times" in capsys.readouterr().err
+
+
+def test_clean_keeps_colab_accelerator():
+    notebook = {"cells": [], "metadata": {"accelerator": "GPU", "colab": {"provenance": []}}}
+    assert clean_notebook(notebook)["metadata"]["accelerator"] == "GPU"
