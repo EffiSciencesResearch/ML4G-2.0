@@ -19,3 +19,6 @@ meta/google_ops/config.yaml
 # Feedback forms authentication files
 meta/feedback_form_creator/creds.json
 meta/feedback_form_creator/token.pickle
+
+# meta/notebook_tests output
+notebook-test-results/

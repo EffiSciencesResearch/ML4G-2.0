@@ -1,0 +1,46 @@
+# Runs the workshop notebooks in Google's Colab runtime on Modal. See meta/notebook_tests/README.md.
+name: Notebook tests on Colab
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notebook-tests
+
+jobs:
+  test:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    # Holds the Modal token and the Slack webhook. The environment only allows master,
+    # so a workflow edited on another branch cannot read them.
+    environment: notebook-tests
+    timeout-minutes: 240
+    steps:
+      # Pinned by commit: this job holds the Modal token.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Run the notebooks on Modal
+        run: uv run --locked --only-group notebook-tests modal run -m meta.notebook_tests.modal_app
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      - name: Tell Slack
+        # A job hitting timeout-minutes is cancelled, not failed.
+        if: failure() || cancelled()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          text="Notebook tests on Colab failed: $RUN_URL"
+          if [ -s notebook-test-results/failed.txt ]; then
+            text+=$'\n'"$(sed 's/^/• /' notebook-test-results/failed.txt)"
+          fi
+          jq -n --arg text "$text" '{text: $text}' \
+            | curl --fail --silent --show-error -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL"
