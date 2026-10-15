@@ -36,6 +36,9 @@ dependencies = [
 dev = [
     "papermill>=2.7.0",
 ]
+notebook-tests = [
+    "modal>=1.5",
+]
 workshops = [
     "torch",
     "torchvision",
