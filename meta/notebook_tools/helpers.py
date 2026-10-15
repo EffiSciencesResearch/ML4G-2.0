@@ -192,7 +192,7 @@ def parse_cell(source: list[str]) -> list[Line]:
 
 def hidden_words_hint(hidden_lines: list[str]) -> str:
     nb_words = sum(len(re.findall(r"[a-zA-Z0-9_]+", line)) for line in hidden_lines)
-    unit = "word" if hidden_lines == 1 else "words"
+    unit = "word" if nb_words == 1 else "words"
     return f"  # TODO: ~{nb_words} {unit}\n"
 
 
