@@ -1,5 +1,6 @@
 from pathlib import Path
 from meta.notebook_tools.cli import sync
+from meta.notebook_tools.helpers import clean_notebook
 
 
 def test_sync(tmpdir):
@@ -21,3 +22,8 @@ def test_sync(tmpdir):
         ):
             assert line1 == line2
         assert len(output.read_text("utf-8")) == len(expected.read_text("utf-8"))
+
+
+def test_clean_keeps_colab_accelerator():
+    notebook = {"cells": [], "metadata": {"accelerator": "GPU", "colab": {"provenance": []}}}
+    assert clean_notebook(notebook)["metadata"]["accelerator"] == "GPU"

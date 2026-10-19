@@ -316,12 +316,17 @@ def generate_exercise_notebooks(notebook: Notebook) -> dict[str, Notebook]:
 def clean_notebook(notebook: Notebook) -> Notebook:
     notebook = deepcopy(notebook)
 
-    notebook["metadata"] = dict(
+    metadata = dict(
         language_info=dict(
             name="python",
             pygments_lexer="ipython3",
         )
     )
+    # Colab opens notebooks with "accelerator": "GPU" on a GPU runtime,
+    # and meta/notebook_tests runs them on a GPU too.
+    if "accelerator" in notebook["metadata"]:
+        metadata["accelerator"] = notebook["metadata"]["accelerator"]
+    notebook["metadata"] = metadata
 
     for cell in notebook["cells"]:
         if "outputs" in cell:
