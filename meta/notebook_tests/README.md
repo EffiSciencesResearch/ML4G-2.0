@@ -4,7 +4,7 @@ Runs the workshop notebooks top to bottom in Google's [Colab runtime image](http
 
 It runs every Monday from GitHub Actions ([`notebook-tests.yml`](../../.github/workflows/notebook-tests.yml)), on `master` only. To run it now: Actions → *Notebook tests on Colab* → *Run workflow*. Each run shows a report on its summary page: which notebooks failed, the failing cell and its traceback. When a notebook fails, a Slack message links to it.
 
-GitHub disables scheduled workflows of public repositories after 60 days without commits. If the Monday runs stop, re-enable the workflow from the Actions tab.
+Before each bootcamp, run it by hand and check it is green. GitHub disables scheduled workflows of public repositories after 60 days without commits, and a disabled workflow sends no Slack message: if the Actions tab shows it as disabled, click *Enable workflow*, then *Run workflow*.
 
 ## How it works
 
@@ -27,7 +27,7 @@ A notebook runs on a GPU when its metadata has `"accelerator": "GPU"`, the field
 |---|---|---|---|---|
 | `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` | GitHub environment `notebook-tests` | running the notebooks on Modal | Modal workspace `ddorn` (Diego) | Modal dashboard → Settings → API Tokens → new token, then `gh secret set <NAME> --env notebook-tests` |
 | `SLACK_WEBHOOK_URL` | GitHub environment `notebook-tests` | failure messages | Slack app *ML4G notebook tests*, posting to Diego's DMs | Slack app → Incoming Webhooks → new webhook, then `gh secret set SLACK_WEBHOOK_URL --env notebook-tests` |
-| `OPENROUTER_API_KEY` | Modal secret `ml4g-notebook-tests` | LLM calls in the notebooks | Diego's OpenRouter account, a dedicated key with a credit limit | OpenRouter → Keys → new key, then `modal secret create --force ml4g-notebook-tests OPENROUTER_API_KEY=...` |
+| `OPENROUTER_API_KEY` | Modal secret `ml4g-notebook-tests` | LLM calls in the notebooks | a dedicated key with a credit limit | OpenRouter → Keys → new key, then `modal secret create --force ml4g-notebook-tests OPENROUTER_API_KEY=...` |
 
 The `notebook-tests` environment only allows `master` (Settings → Environments → *Deployment branches and tags*), so jobs from any other branch cannot read its secrets, even if they edit the workflow. Keep these as environment secrets: repository secrets are readable from every branch.
 
