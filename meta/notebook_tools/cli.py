@@ -9,6 +9,7 @@ import typer
 
 from meta.notebook_tools.helpers import (
     ROOT,
+    DirectiveError,
     add_badge,
     check_link,
     clean_notebook,
@@ -106,7 +107,11 @@ def badge(files: list[Path]):
 def sync(files: list[Path]):
     for file in gather_ipynbs(files):
         notebook = load_notebook(file)
-        new_notebooks = generate_exercise_notebooks(notebook)
+        try:
+            new_notebooks = generate_exercise_notebooks(notebook)
+        except DirectiveError as e:
+            typer.echo(f"{file}: {e}", err=True)
+            raise typer.Exit(1)
 
         for label, new_notebook in new_notebooks.items():
             out_path = file.with_stem(file.stem + f"_{label}")
