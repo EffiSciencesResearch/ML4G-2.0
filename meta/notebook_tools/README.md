@@ -9,7 +9,7 @@ Invoke with `uv run python -m meta.notebook_tools <command>`.
 - `neat` — the canonical one-shot command: runs `clean` + `badge` + `fmt` on the given notebooks. **Use this by default.**
 - `clean` — strip outputs, execution counts, and per-cell metadata.
 - `badge` — add or update the "Open in Colab" badge on a workshop notebook.
-- `sync` — regenerate exercise/variant notebooks (`_normal`, `_hard`, ...) from a solution notebook using `# Hide:` annotations.
+- `sync` — regenerate exercise/variant notebooks (`_normal`, `_hard`, ...) from a solution notebook using `# Hide:` and `# Blank:` annotations (see `CONTRIBUTING.md`).
 - `show_links` — list every URL referenced in the repository.
 - `check_links` — flag broken or misrouted links (e.g. Colab links to deleted files).
 - `fix_typos` — interactively fix typos in a notebook via gpt-3.5 (requires `OPENAI_API_KEY`).
