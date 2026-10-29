@@ -73,3 +73,11 @@ def list_problems() -> list[str]:
         for path in sorted(notebooks - listed)
     ]
     return problems
+
+
+if __name__ == "__main__":
+    # Run by the pre-commit hook: python -m meta.notebook_tests.notebooks
+    problems = list_problems()
+    for problem in problems:
+        print(problem)
+    raise SystemExit(1 if problems else 0)
