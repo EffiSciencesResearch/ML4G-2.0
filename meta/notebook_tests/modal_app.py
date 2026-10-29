@@ -3,8 +3,10 @@
     modal run -m meta.notebook_tests.modal_app
     modal run -m meta.notebook_tests.modal_app --notebooks workshops/tensors/tensors.ipynb
 
-Writes report.md, failed.txt and the executed notebooks to --out, and exits non-zero if any
-notebook failed. Set COLAB_RELEASE to test a specific Colab release instead of the latest.
+Without --notebooks, tests the TESTED notebooks of notebooks.py, after checking that its lists
+cover every workshop notebook. Writes report.md, failed.txt and the executed notebooks to --out,
+and exits non-zero if a notebook failed or the lists need updating. Set COLAB_RELEASE to test
+a specific Colab release instead of the latest.
 """
 
 import json
@@ -16,6 +18,8 @@ from pathlib import Path
 
 import modal
 
+from meta.notebook_tests.notebooks import ROOT, TESTED, list_problems
+
 # Older Modal image builders pip-install their own pinned packages (protobuf, aiohttp...)
 # into the image, so the test environment would no longer be Colab's.
 os.environ.setdefault("MODAL_IMAGE_BUILDER_VERSION", "2025.06")
@@ -23,18 +27,6 @@ os.environ.setdefault("MODAL_IMAGE_BUILDER_VERSION", "2025.06")
 COLAB_IMAGE = "us-docker.pkg.dev/colab-images/public/runtime"
 SECRET_NAME = "ml4g-notebook-tests"
 CELL_TIMEOUT_S = 30 * 60
-
-# The solution notebooks taught at bootcamps. Exercise variants (_normal, _hard)
-# are generated from them, so they are not tested separately.
-DEFAULT_NOTEBOOKS = [
-    "workshops/agents/agents.ipynb",
-    "workshops/induction_heads/induction_heads.ipynb",
-    "workshops/reasoning_models_faithfullness/reasoning_models_faithfullness.ipynb",
-    "workshops/rlhf/rlhf.ipynb",
-    "workshops/tensors/tensors.ipynb",
-    "workshops/transformer/transformer.ipynb",
-    "workshops/transformer_interp/solutions.ipynb",
-]
 
 
 def latest_colab_release() -> str:
@@ -151,13 +143,18 @@ def code_block(text: str, language: str = "") -> list[str]:
     return [fence + language, text, fence]
 
 
-def report(results: dict[str, dict]) -> str:
+def report(results: dict[str, dict], problems: list[str]) -> str:
     n_failed = sum(not r["passed"] for r in results.values())
     lines = [
         "# Notebook tests on Colab",
         "",
         f"Colab runtime `{COLAB_RELEASE}`: "
         + (f"**{n_failed} of {len(results)} notebooks failed.**" if n_failed else "all passed."),
+    ]
+    if problems:
+        lines += ["", "**The notebook lists need updating:**", ""]
+        lines += [f"- {problem}" for problem in problems]
+    lines += [
         "",
         "| | Notebook | Minutes | Error |",
         "|---|---|---|---|",
@@ -179,14 +176,20 @@ def report(results: dict[str, dict]) -> str:
 
 @app.local_entrypoint()
 def main(notebooks: str = "", out: str = "notebook-test-results"):
-    paths = notebooks.split(",") if notebooks else DEFAULT_NOTEBOOKS
+    if notebooks:
+        paths, problems = notebooks.split(","), []
+    else:
+        problems = list_problems()
+        paths = [path for path in TESTED if (ROOT / path).exists()]
+    for problem in problems:
+        print(f"❌ {problem}", flush=True)
     print(f"Testing {len(paths)} notebooks on Colab runtime {COLAB_RELEASE}", flush=True)
 
     # All notebooks run in parallel, each in its own container.
     run_notebook_gpu = run_notebook.with_options(gpu="T4")
     calls = {}
     for path in paths:
-        source = Path(path).read_text()
+        source = (ROOT / path).read_text()
         calls[path] = (run_notebook_gpu if needs_gpu(source) else run_notebook).spawn(source)
 
     out_dir = Path(out)
@@ -202,10 +205,10 @@ def main(notebooks: str = "", out: str = "notebook-test-results"):
             (out_dir / path.replace("/", "__")).write_text(executed)
         print(f"{'✅' if results[path]['passed'] else '❌'} {path}", flush=True)
 
-    summary = report(results)
+    summary = report(results, problems)
     (out_dir / "report.md").write_text(summary)
-    failed = [path for path, r in results.items() if not r["passed"]]
-    (out_dir / "failed.txt").write_text("".join(f"{path}\n" for path in failed))
+    failed = [path for path, r in results.items() if not r["passed"]] + problems
+    (out_dir / "failed.txt").write_text("".join(f"{line}\n" for line in failed))
     if step_summary := os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(step_summary, "a") as f:
             f.write(summary)
