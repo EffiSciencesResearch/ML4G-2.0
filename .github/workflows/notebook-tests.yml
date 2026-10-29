@@ -27,7 +27,8 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Run the notebooks on Modal
-        run: uv run --locked --only-group notebook-tests modal run -m meta.notebook_tests.modal_app
+        # The main dependencies include notebook_tools', which checks the notebook lists.
+        run: uv run --locked --no-default-groups --group notebook-tests modal run -m meta.notebook_tests.modal_app
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
