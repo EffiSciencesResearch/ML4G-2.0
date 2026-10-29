@@ -12,6 +12,15 @@ repos:
         - -m
         - meta.notebook_tools
         - sync
+    -   id: notebook-test-lists
+        name: check the notebook test lists cover every workshop notebook
+        files: ^workshops/.*\.ipynb$
+        pass_filenames: false
+        language: system
+        entry: python
+        args:
+        - -m
+        - meta.notebook_tests.notebooks
 
 
 -   repo: https://github.com/psf/black

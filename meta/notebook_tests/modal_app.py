@@ -22,7 +22,7 @@ from meta.notebook_tests.notebooks import ROOT, TESTED, list_problems
 
 # Older Modal image builders pip-install their own pinned packages (protobuf, aiohttp...)
 # into the image, so the test environment would no longer be Colab's.
-os.environ.setdefault("MODAL_IMAGE_BUILDER_VERSION", "2025.06")
+os.environ["MODAL_IMAGE_BUILDER_VERSION"] = "2025.06"
 
 COLAB_IMAGE = "us-docker.pkg.dev/colab-images/public/runtime"
 SECRET_NAME = "ml4g-notebook-tests"
@@ -33,7 +33,7 @@ def latest_colab_release() -> str:
     """Name of the release behind the Colab runtime image's `latest` tag."""
     registry, _, repo = COLAB_IMAGE.partition("/")
     with urllib.request.urlopen(f"https://{registry}/v2/{repo}/tags/list", timeout=30) as r:
-        manifests = json.load(r)["manifest"].values()
+        manifests = json.load(r).get("manifest", {}).values()
     for tags in (m["tag"] for m in manifests):
         release = next((t for t in tags if t.startswith("release-")), None)
         if "latest" in tags and release:
@@ -74,7 +74,8 @@ def strip_ansi(text: str) -> str:
     # Hard limits (request, limit): by default Modal lets containers burst far above.
     cpu=(2, 2),
     memory=(12_000, 13_000),
-    timeout=3 * 60 * 60,
+    # Well within the workflow's timeout-minutes, so results reach the report.
+    timeout=2 * 60 * 60,
     startup_timeout=20 * 60,
     # pip installs from one notebook must not leak into the next.
     single_use_containers=True,
@@ -126,6 +127,9 @@ def run_notebook(source: str) -> dict:
                 "error": error,
                 "traceback": strip_ansi("\n".join(errors[-1].traceback)) if errors else "",
             }
+    except Exception as e:
+        # nbclient raises RuntimeError and TimeoutError when the kernel fails to start.
+        result = {"passed": False, "error": f"{type(e).__name__}: {e}"}
     result["minutes"] = (time.monotonic() - start) / 60
     result["executed"] = nbformat.writes(nb)
     return result
@@ -195,16 +199,26 @@ def main(notebooks: str = "", out: str = "notebook-test-results"):
     out_dir = Path(out)
     out_dir.mkdir(parents=True, exist_ok=True)
     results = {}
-    for path, call in calls.items():
-        try:
-            results[path] = call.get()
-        except Exception as e:
-            # The container itself failed: timeout, out of memory...
-            results[path] = {"passed": False, "error": f"{type(e).__name__}: {e}"}
-        if executed := results[path].pop("executed", None):
-            (out_dir / path.replace("/", "__")).write_text(executed)
-        print(f"{'✅' if results[path]['passed'] else '❌'} {path}", flush=True)
+    try:
+        for path, call in calls.items():
+            try:
+                results[path] = call.get()
+            except Exception as e:
+                # The container itself failed: timeout, out of memory...
+                results[path] = {"passed": False, "error": f"{type(e).__name__}: {e}"}
+            if executed := results[path].pop("executed", None):
+                (out_dir / path.replace("/", "__")).write_text(executed)
+            print(f"{'✅' if results[path]['passed'] else '❌'} {path}", flush=True)
+    finally:
+        # Also report what finished when the run is cancelled, e.g. by the workflow's timeout.
+        for path in paths:
+            results.setdefault(
+                path, {"passed": False, "error": "No result: the run was interrupted."}
+            )
+        write_report(results, problems, out_dir)
 
+
+def write_report(results: dict[str, dict], problems: list[str], out_dir: Path) -> None:
     summary = report(results, problems)
     (out_dir / "report.md").write_text(summary)
     failed = [path for path, r in results.items() if not r["passed"]] + problems
