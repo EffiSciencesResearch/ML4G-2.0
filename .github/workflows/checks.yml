@@ -1,0 +1,39 @@
+# Runs pytest and the pre-commit hooks on every pull request and on master.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Puts .venv on PATH: the local pre-commit hooks run a bare `python -m meta.notebook_tools`.
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          activate-environment: true
+      # Only the main dependencies: the workshops group (torch etc.) is not needed here.
+      - name: Install dependencies
+        run: uv sync --locked --no-default-groups
+      - name: Run pytest
+        run: pytest tests
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      # Fails if any hook would change a file, e.g. an exercise notebook out of sync with its solution.
+      - name: Run the pre-commit hooks
+        run: pre-commit run --all-files --show-diff-on-failure
